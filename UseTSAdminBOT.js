@@ -238,7 +238,7 @@ registerPlugin(
                 /*
                  Internal function for website
                  */
-                var options = {method: "GET", headers: "Content-type: text/html; charset=utf-8", timeout: 10000, url: "https://usets.pl/staff.php?auth=snjijeowhofn&online=" + sinusbot.getVar("staff").length};
+                var options = {method: "GET", headers: "Content-type: text/html; charset=utf-8", timeout: 10000, url: "https://usets.pl/staff.php?online=" + sinusbot.getVar("staff").length};
                 http(options, function(error, response){
                 });
                 //Webviewer

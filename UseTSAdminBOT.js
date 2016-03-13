@@ -81,12 +81,12 @@ registerPlugin(
 
         var self = sinusbot.getBotId();
 
-        sinusbot.setVar("staff", []);
+        sinusbot.setVar('staff', []);
         sinusbot.setVar("tempChannels", []);
         sinusbot.setVar("onChannelCreate", []);
         sinusbot.setVar("onlineClients", 1);
 
-        var staff = sinusbot.getVar("staff");
+        var staff = sinusbot.getVar('staff');
 
         if(isUndefined(config.autoTempChannelsParentId) || parseInt(config.autoTempChannelsParentId) < 0)
         {
@@ -110,7 +110,7 @@ registerPlugin(
         {
             var isStaff = haveGroupFromArray(e, helpGroupsId);
             var isIgnored = haveGroupFromArray(e, helpIgnoredGroupsId);
-            var staff = sinusbot.getVar("staff");
+            var staff = sinusbot.getVar('staff');
 
             if(isStaff)
             {
@@ -129,7 +129,7 @@ registerPlugin(
                 }
             }
 
-            sinusbot.setVar("staff", staff);
+            sinusbot.setVar('staff', staff);
 
             if (isNewChannelInArray(e, helpChannelsId) && isIgnored == false)
             {
@@ -235,17 +235,7 @@ registerPlugin(
          Timer checks event
          */
         setInterval(function() {
-                /*
-                 Internal function for website
-                 */
-                var options = {method: "GET", headers: "Content-type: text/html; charset=utf-8", timeout: 10000, url: "https://usets.pl/staff.php?online=" + sinusbot.getVar("staff").length};
-                http(options, function(error, response){
-                });
-                //Webviewer
-                var options = {method: "GET", headers: "Content-type: text/html; charset=utf-8", timeout: 10000, url: "https://usets.pl/webviewer.php"};
-                http(options, function(error, response){});
-
-                //Temp channels inactive delete
+                //Temporary channels inactive deleting
                 var tempChannels = sinusbot.getVar("tempChannels");
 
                 for(var i = 0; i < tempChannels.length; i++)
@@ -315,10 +305,7 @@ registerPlugin(
             if(e.oldChannel == 0 && config.registerMessageOn == 0) {
                 var isNew = !haveGroupOnServer(e, parseInt(config.registerGroupId));
 
-                //Staff Groups bypass
-                isNew = !haveGroupFromArray(e, helpGroupsId);
-
-                if (isNew) {
+                if (isNew && !haveGroupFromArray(e, helpGroupsId)) {
                     var message = config.registerWelcomeMessage;
                     if(config.registerMessageType == 0) {
                         poke(e.clientId, message);
@@ -346,7 +333,7 @@ registerPlugin(
 
                 //Staff Groups bypass
                 if(haveGroupFromArray(e, helpGroupsId)){
-                    staffOnlineChannel(sinusbot.getVar("staff").length);
+                    staffOnlineChannel(sinusbot.getVar('staff').length);
                 }
             }
         });
@@ -445,22 +432,29 @@ registerPlugin(
         });
 
         /*
+         Web Data API Event
+         */
+        sinusbot.on('api:event', function (data) {
+            return sinusbot.getVar('staff').length;
+        });
+
+        /*
          Fix for staff array
          */
         sinusbot.on('clientServergroupAdd', function(client) {
             if(haveSpecificGroupFromArray(client.serverGroupId, helpGroupsId))
             {
-                var staff = sinusbot.getVar("staff");
+                var staff = sinusbot.getVar('staff');
                 staff.push(client.clientId);
-                sinusbot.setVar("staff", staff);
-                staffOnlineChannel(sinusbot.getVar("staff").length);
+                sinusbot.setVar('staff', staff);
+                staffOnlineChannel(sinusbot.getVar('staff').length);
             }
         });
 
         sinusbot.on('clientServergroupDel', function(client) {
             if(haveSpecificGroupFromArray(client.serverGroupId, helpGroupsId)) {
-                sinusbot.setVar("staff", removeFromArray(sinusbot.getVar("staff"), client.clientId));
-                staffOnlineChannel(sinusbot.getVar("staff").length);
+                sinusbot.setVar('staff', removeFromArray(sinusbot.getVar('staff'), client.clientId));
+                staffOnlineChannel(sinusbot.getVar('staff').length);
             }
         });
 

@@ -13,7 +13,7 @@ UseTS-AdminBOT is multifunctional bot script in ECMAScript 5 (JavaScript) to use
   - Users tracking system.
   - Channels activity logging system.
 
-> Script is under development for BETA release 0.1.0. 
+> Script is under development for BETA release. 
 
 ##### Ideas and bugs reports here https://github.com/sync667/UseTS-AdminBOT/issues 
 
@@ -32,12 +32,12 @@ That's it!
 
 Want to contribute? Great!
 
-Just make sure you're using latest version of Sinusbot and make Pull Request with you code.
+Just make sure you're using latest version of Sinusbot and make Pull Request with your code.
 
 ### TODOs
 
 - https://forum.sinusbot.com/threads/request-close-channels.1225/
-- Support channels can have special description about admins or special channel can have that one.
+- Support channels can have special description about admins or special channel can have that one. (soon*)
 - Auto add user to specific group joining specific channel.
 - Better defaults setting handling.
 - Bot flood check.
@@ -47,13 +47,16 @@ Just make sure you're using latest version of Sinusbot and make Pull Request wit
 - Welcome user with some info maybe stats.
 - Groups who can get auto temp channel.
 - Check if there are any channels with inactive date some of period.
-- Channel staff info auto update.
+- Channel staff info auto update. (soon*)
 - Bot lang setting.
 - Social media integrator.
 - Google Analytics reporting functions.
 - Auto sub functions for streamers and yt.
 - Information if staff user join channel where user is waiting to other members.
 - Data access by Web API not send by request.
+- Staff reactions for help statistics.
+
+* Soon because of waiting for new functions in next Sinusbot version
 
 License
 ----

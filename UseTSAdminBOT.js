@@ -33,6 +33,12 @@ registerPlugin(
                 placeholder: 'Hi [b]s0[/b]! Sorry, but all our staff is offline come back later.'},
             helpStaffNotification: {title: 'Message to staff - s0 for Username, s1 for Staff Online', type: 'string',
                 placeholder: 'User [b]s0[/b] is waiting in support zone! [b]Online staff:[/b] s1'},
+            helpStaffAway: {title: 'Message to user after Staff Away Time passed about staff currently busy', type: 'string',
+                placeholder: 'Sorry! Our staff is currently busy. They will contact you as soon as possible.'},
+            helpStaffAwayTime: {title: 'Timer after with user will get notification about staff is busy right now in seconds (0 to disable)', type: 'number',
+                placeholder: 'Default 60 seconds'},
+            helpStaffJoined: {title: 'Message to staff when someone of them join to help user - s0 for Username of helper, s1 for Username of user', type: 'string',
+                placeholder: 'Staff member [b]s0[/b] joined to help [b]s1[/b].'},
             helpNotificationType: {title: 'Support notification type', type: 'select', options: ['Chat','Poke']},
             autoTempChannelsId: {title: 'Auto temporary channels (comma separated)', type: 'string' },
             autoTempChannelsParentId: {title: 'Auto temporary channels parent', type: 'channel' },
@@ -82,9 +88,10 @@ registerPlugin(
         var self = sinusbot.getBotId();
 
         sinusbot.setVar('staff', []);
-        sinusbot.setVar("tempChannels", []);
-        sinusbot.setVar("onChannelCreate", []);
-        sinusbot.setVar("onlineClients", 1);
+        sinusbot.setVar('tempChannels', []);
+        sinusbot.setVar('onChannelCreate', []);
+        sinusbot.setVar('onlineClients', 1);
+        sinusbot.setVar('usersOnHelp', []);
 
         var staff = sinusbot.getVar('staff');
 
@@ -96,6 +103,11 @@ registerPlugin(
         if(isUndefined(config.autoTempChannelsPassLength) || config.autoTempChannelsPassLength < 0)
         {
             config.autoTempChannelsPassLength = 4;
+        }
+
+        if(isUndefined(config.helpStaffAwayTime) || config.helpStaffAwayTime < 0)
+        {
+            config.helpStaffAwayTime = 60;
         }
 
         if(isUndefined(sinusbot.getVar("maxOnlineRecord")))
@@ -111,6 +123,7 @@ registerPlugin(
             var isStaff = haveGroupFromArray(e, helpGroupsId);
             var isIgnored = haveGroupFromArray(e, helpIgnoredGroupsId);
             var staff = sinusbot.getVar('staff');
+            var usersOnHelp = sinusbot.getVar('usersOnHelp');
 
             if(isStaff)
             {
@@ -131,29 +144,60 @@ registerPlugin(
 
             sinusbot.setVar('staff', staff);
 
-            if (isNewChannelInArray(e, helpChannelsId) && isIgnored == false)
+            if (isChannelInArray(e.newChannel, helpChannelsId))
             {
-                if (isUndefined(staff) || staff.length <= 0)
-                {
-                    if (config.helpNotificationType == 0)
-                        chatPrivate(e.clientId, replaceSNVariables(config.helpUserNotification2, e.clientNick));
-                    else if (config.helpNotificationType == 1)
-                        poke(e.clientId, replaceSNVariables(config.helpUserNotification2, e.clientNick));
-                } else {
-                    staff.forEach(function (staffClientId) {
-                        sinusbot.log(staffClientId);
-                        if (config.helpNotificationType == 0)
-                            chatPrivate(staffClientId, replaceSNVariables(config.helpStaffNotification, e.clientNick, staff.length));
-                        else if (config.helpNotificationType == 1)
-                            poke(staffClientId, replaceSNVariables(config.helpStaffNotification, e.clientNick, staff.length));
-                    });
+                if(isIgnored == false) {
+                    if (isUndefined(staff) || staff.length <= 0) {
+                        sendUserNotification(config.helpNotificationType, e.clientId, replaceSNVariables(config.helpUserNotification2, e.clientNick));
+                        usersOnHelp.push({clientId: e.clientId, clientNick: e.clientNick, newChannel: e.newChannel, oldChannel: e.oldChannel, action: 1, staffReaction: false});
+                    } else {
+                        staff.forEach(function (staffClientId) {
+                            sendUserNotification(config.helpNotificationType, staffClientId, replaceSNVariables(config.helpStaffNotification, e.clientNick, staff.length));
+                        });
+                        sendUserNotification(config.helpNotificationType, e.clientId, replaceSNVariables(config.helpUserNotification, e.clientNick, staff.length));
+                        usersOnHelp.push({clientId: e.clientId, clientNick: e.clientNick, newChannel: e.newChannel, oldChannel: e.oldChannel, action: 2, staffReaction: false});
+                        if (config.helpStaffAwayTime > 0) {
+                            setTimeout(function () {
+                                var userOnHelpF = sinusbot.getVar('usersOnHelp');
+                                for(var i = 0; i < userOnHelpF.length; i++) {
+                                    var user = userOnHelpF[i];
+                                    if (user.clientId == e.clientId && user.staffReaction != true) {
+                                        sendUserNotification(config.helpNotificationType, e.clientId, config.helpStaffAway);
+                                    }
+                                }
+                            }, 1000 * config.helpStaffAwayTime);
+                        }
+                    }
+                    sinusbot.setVar('usersOnHelp', usersOnHelp);
 
-                    if (config.helpNotificationType == 0)
-                        chatPrivate(e.clientId, replaceSNVariables(config.helpUserNotification, e.clientNick, staff.length));
-                    else if (config.helpNotificationType == 1)
-                        poke(e.clientId, replaceSNVariables(config.helpUserNotification, e.clientNick, staff.length));
+                } else {
+                    for(var i = 0; i < usersOnHelp.length; i++) {
+                        var user = usersOnHelp[i];
+                        if (user.newChannel == e.newChannel && user.staffReaction != true) {
+                            staff.forEach(function (staffClientId) {
+                                if(staffClientId != e.clientId) {
+                                    sendUserNotification(config.helpNotificationType, staffClientId, replaceSNVariables(config.helpStaffJoined, e.clientNick, user.clientNick));
+                                }
+                            });
+                            user.staffReaction = true;
+                            usersOnHelp[i] = user;
+                        }
+                    }
+                    sinusbot.setVar('usersOnHelp', usersOnHelp);
+                }
+            } else if(isChannelInArray(e.oldChannel, helpChannelsId))
+            {
+                if(isIgnored == false) {
+                    for(var i = 0; i > usersOnHelp.length; i++) {
+                        var user = usersOnHelp[i];
+                        if (user.clientId == e.clientId && user.oldChannel == e.oldChannel) {
+                            removeFromArray(usersOnHelp, user);
+                        }
+                    }
+                    sinusbot.setVar('usersOnHelp', usersOnHelp);
                 }
             }
+
         });
         /*
          //END Support Channels auto poke function section //END
@@ -164,7 +208,7 @@ registerPlugin(
          */
         sinusbot.on('clientMove', function(e)
         {
-            if(isNewChannelInArray(e, autoTempChannelsId))
+            if(isChannelInArray(e.newChannel, autoTempChannelsId))
             {
                 var autoTempChannelParentId = parseInt(config.autoTempChannelsParentId);
                 var channelName = config.autoTempChannelsName;
@@ -255,7 +299,13 @@ registerPlugin(
          */
         sinusbot.on('chat', function(chat){
            if(config.botAIPrivateChat == 0 && chat.mode == 1 && getNick() != chat.clientNick) {
-               if (!haveGroupFromArray(chat, helpGroupsId) && chat.msg != 'info') {
+               var check = true;
+               if (new RegExp('info [0-9]+').test(chat.msg) || chat.msg == 'info' || chat.msg == 'info server') {
+                   if (haveGroupOnServer(chat, helpGroupsId)) {
+                       check = false;
+                   }
+               }
+               if (check) {
                    var options = {
                        method: "GET",
                        headers: "Content-type: text/html; charset=utf-8",
@@ -284,7 +334,7 @@ registerPlugin(
                 var options = {
                     method: "GET",
                     headers: "Content-type: text/html; charset=utf-8",
-                    timeout: 30000, url: "https://usets.pl/bot.php?msg=" + message.msg
+                    timeout: 15000, url: "https://usets.pl/bot.php?msg=" + message.msg
                 };
                 http(options, function(error, response){
                     if(error == null && response != null && response.statusCode == 200) {
@@ -386,25 +436,27 @@ registerPlugin(
         sinusbot.on('chat', function(chat) {
            if(getNick() != chat.clientNick && chat.mode == 1 && haveGroupFromArray(chat, helpGroupsId))
            {
-               if(chat.msg == 'info' || chat.msg == 'info server')
+               if(chat.msg == 'info' || chat.msg == 'info server' || new RegExp('info [0-9]+').test(chat.msg))
                {
                    if(chat.msg == 'info') {
-                       var channelLogChannel = sinusbot.getVar(chat.channel);
-                   } else {
-                       var channelLogChannel = sinusbot.getVar(0);
+                       var channelLog = sinusbot.getVar(chat.channel);
+                   } else if(new RegExp('info [0-9]+').test(chat.msg)) {
+                       var channelLog = sinusbot.getVar(parseInt(chat.msg.split(' ')[1]));
+                   } else if(chat.msg == 'info server') {
+                       var channelLog = sinusbot.getVar(0);
                    }
 
-                   if(isUndefined(channelLogChannel) || channelLogChannel.length <= 0)
+                   if(isUndefined(channelLog) || channelLog.length <= 0)
                    {
                        chatPrivate(chat.clientId, 'No entry logs for this channel!');
                    } else {
-                       if(channelLogChannel.length < 50) {
+                       if(channelLog.length < 50) {
                            var history = 0;
                        } else {
-                           var history = channelLogChannel.length - 50;
+                           var history = channelLog.length - 50;
                        }
-                       for (var i = history; i < channelLogChannel.length; i++) {
-                           var logEntry = channelLogChannel[i];
+                       for (var i = history; i < channelLog.length; i++) {
+                           var logEntry = channelLog[i];
                            var entryType = 'error';
 
                            switch(logEntry[5]){
@@ -425,7 +477,7 @@ registerPlugin(
                            chatPrivate(chat.clientId, 'Date: ' + new Date(logEntry[0]).toISOString() + '/ClientId: ' + logEntry[1] + '/ClientName: ' + logEntry[2] + '/OldChannel: '
                                     + logEntry[3] + '/NewChannel: ' + logEntry[4] + '/' + entryType);
                        }
-                       chatPrivate(chat.clientId, 'All records - ' + channelLogChannel.length);
+                       chatPrivate(chat.clientId, 'All records - ' + channelLog.length);
                    }
                }
            }
@@ -498,6 +550,17 @@ registerPlugin(
                     channelUpdate(channel.id, {name: channel.name});
                 }
             }
+        }
+
+        /*
+         Function with will send notification poke or chat message
+         */
+        function sendUserNotification(notificationType, user, message)
+        {
+            if (notificationType == 0)
+                chatPrivate(user, message);
+            else if (notificationType == 1)
+                poke(user, message);
         }
 
         /*
@@ -613,7 +676,7 @@ registerPlugin(
         /*
          Function return status of new user channel if it is one from array
          */
-        function isNewChannelInArray(e, array)
+        function isChannelInArray(channel, array)
         {
             var result = !array.every(function(id) {
                 if(typeof(id) != 'number')
@@ -621,7 +684,7 @@ registerPlugin(
                     id = parseInt(id);
                 }
 
-                if(e.newChannel == id) {
+                if(channel == id) {
                     return false;
                 } else {
                     return true;

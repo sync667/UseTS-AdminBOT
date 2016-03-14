@@ -3,15 +3,28 @@
 
 UseTS-AdminBOT is multifunctional bot script in ECMAScript 5 (JavaScript) to use with www.sinusbot.com
 
-  - Support channels zone with auto poke or chat function
-  - Support channel with automatic name + online staff members information
-  - Automatic temporary channels secure system by user joining specific channels
+  - Support channels with many automatic functions.
+    - All staff members will be informed about user waiting.
+    - User will get notification that staff was informed.
+    - After specific time in settings user will be informed that staff is away if no one of them take help action.
+    - If any staff user will go to help user rest of them will get information about that.
+  - Support channel with automatic name + online staff members information.
+  - Automatic temporary channels secure system by user joining specific channels.
   - Bots with AI so you can talk with them!
-  - Welcome message send by bot.
+  - Welcome message send by bot if user do not have specific register group.
   - Users Online automatic channel.
   - Max Users Online automatic channel.
   - Users tracking system.
   - Channels activity logging system.
+  
+##### Commands
+ By Private Chat to Bot
+ - info - Currently channel activity last 50 records*1
+ - info server - Joins/Disconnects last 50 records to server*1
+ - info ID - Specific channel by ID last 50 records*1
+ 
+Permissions
+*1 only Help Groups
 
 > Script is under development for BETA release. 
 
@@ -51,10 +64,14 @@ Just make sure you're using latest version of Sinusbot and make Pull Request wit
 - Bot lang setting.
 - Social media integrator.
 - Google Analytics reporting functions.
-- Auto sub functions for streamers and yt.
-- Information if staff user join channel where user is waiting to other members.
-- Data access by Web API not send by request.
+- Auto sub functions for streamers and yt. (soon*)
+- Data access by Web API not send by request. (in progress)
 - Staff reactions for help statistics.
+- Nicks changes logging. (soon*)
+- Channel creation, update or delete logging.
+- Recording start/stop logging.
+- Recording in all channels or specific one is denied.
+- Move AFK user.
 
 * Soon because of waiting for new functions in next Sinusbot version
 

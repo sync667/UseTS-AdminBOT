@@ -72,8 +72,10 @@ Just make sure you're using latest version of Sinusbot and make Pull Request wit
 - Recording start/stop logging.
 - Recording in all channels or specific one is denied.
 - Move AFK user.
+- Channels names restrictions.
+- Bot help menu.
 
-* Soon because of waiting for new functions in next Sinusbot version
+(soon*) because of waiting for new functions in next Sinusbot version
 
 License
 ----

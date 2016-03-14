@@ -26,9 +26,19 @@ UseTS-AdminBOT is multifunctional bot script in ECMAScript 5 (JavaScript) to use
 Permissions
 *1 only Help Groups
 
-> Script is under development for BETA release. 
+> Script is under development so please report an issues on Bug Tracker. 
 
 ##### Ideas and bugs reports here https://github.com/sync667/UseTS-AdminBOT/issues 
+
+### Teamspeak Privileges Required
+- Client>Basics
+- Client>Admin>Move
+- Channel>Information
+- Channel>Create
+- Channel>Modify
+- Channel>Delete
+- Channel>Access
+- Group>Information
 
 ### Version
 0.1.1

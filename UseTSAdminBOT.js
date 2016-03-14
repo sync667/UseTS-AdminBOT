@@ -43,7 +43,7 @@ registerPlugin(
             autoTempChannelsId: {title: 'Auto temporary channels (comma separated)', type: 'string' },
             autoTempChannelsParentId: {title: 'Auto temporary channels parent', type: 'channel' },
             autoTempChannelsName: {title: 'Automatic temporary channel name - s0 is channel number', type: 'string',
-                placeholder: 'Temp Channel s0'},
+                placeholder: 'Temporary Channel s0'},
             autoTempChannelsMessage: {title: 'Message to user about auto temporary chanel get created', type: 'string',
                 placeholder: 'I created temporary channel as you wish!'},
             autoTempChannelsPassMessage: {title: 'Message to user about auto temporary chanel password - s0 is password', type: 'string',
@@ -71,7 +71,7 @@ registerPlugin(
             registerMessageType: {title: 'Type of message poke or chat', type: 'select',
                 options: ['Poke', 'Chat']},
             registerMessageOn: {title: 'Turn on or off welcome message poke or chat', type: 'select',
-                options: ['On', 'Off']}
+                options: ['Off', 'On']}
         }
     },
     function(sinusbot, config, info)
@@ -96,24 +96,39 @@ registerPlugin(
         var staff = sinusbot.getVar('staff');
 
         if(isUndefined(config.autoTempChannelsParentId) || parseInt(config.autoTempChannelsParentId) < 0)
-        {
             config.autoTempChannelsParentId = 0;
-        }
-
         if(isUndefined(config.autoTempChannelsPassLength) || config.autoTempChannelsPassLength < 0)
-        {
             config.autoTempChannelsPassLength = 4;
-        }
-
         if(isUndefined(config.helpStaffAwayTime) || config.helpStaffAwayTime < 0)
-        {
             config.helpStaffAwayTime = 60;
-        }
-
+        if(isUndefined(config.botChecksPerMinute) || config.botChecksPerMinute < 0)
+            config.botChecksPerMinute = 1;
         if(isUndefined(sinusbot.getVar("maxOnlineRecord")))
-        {
             sinusbot.setVar("maxOnlineRecord", 0);
-        }
+        if(isUndefined(config.helpUserNotification))
+            config.helpUserNotification = "Hi [b]s0[/b]! Staff member will help you soon! [b]Online staff:[/b] s1";
+        if(isUndefined(config.helpUserNotification2))
+            config.helpUserNotification = "Hi [b]s0[/b]! Sorry, but all our staff is offline come back later.";
+        if(isUndefined(config.helpStaffNotification))
+            config.helpUserNotification = "User [b]s0[/b] is waiting in support zone! [b]Online staff:[/b] s1";
+        if(isUndefined(config.helpStaffAway))
+            config.helpUserNotification = "Sorry! Our staff is currently busy. They will contact you as soon as possible.";
+        if(isUndefined(config.helpStaffJoined))
+            config.helpUserNotification = "Staff member [b]s0[/b] joined to help [b]s1[/b].";
+        if(isUndefined(config.autoTempChannelsName))
+            config.helpUserNotification = "Temporary Channel s0";
+        if(isUndefined(config.autoTempChannelsMessage))
+            config.helpUserNotification = "I created temporary channel as you wish!";
+        if(isUndefined(config.autoTempChannelsPassMessage))
+            config.helpUserNotification = "Your channel password: s0";
+        if(isUndefined(config.autoTempChannelsErrorMessage))
+            config.helpUserNotification = "I can't created temporary channel for you right now, try later.";
+        if(isUndefined(config.onlineUsersChannel))
+            config.helpUserNotification = "Users Online: s0";
+        if(isUndefined(config.maxOnlineUsersChannel))
+            config.helpUserNotification = "Max Users Online: s0";
+        if(isUndefined(config.staffOnlineChannelName))
+            config.helpUserNotification = "Staff Online: s0";
 
         /*
          Support Channels auto poke function event section

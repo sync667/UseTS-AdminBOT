@@ -31,7 +31,7 @@ Permissions
 ##### Ideas and bugs reports here https://github.com/sync667/UseTS-AdminBOT/issues 
 
 ### Version
-0.1.0
+0.1.1
 
 ### Installation
 You need Sinusbot installed:
@@ -74,6 +74,7 @@ Just make sure you're using latest version of Sinusbot and make Pull Request wit
 - Move AFK user.
 - Channels names restrictions.
 - Bot help menu.
+- Better scripts settings reloading handling.
 
 (soon*) because of waiting for new functions in next Sinusbot version
 

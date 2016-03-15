@@ -20,11 +20,11 @@
 registerPlugin(
     {
         name: 'UseTS-AdminBOT',
-        version: '0.1.1',
+        version: '0.2.0',
         description: 'Many administration functions in one plugin.',
         author: 'sync667',
         vars: {
-            helpChannelsId: { title: 'Support Channels (comma separated)', type: 'string' },
+            helpChannelsId: { title: 'Support Channels - IDs (comma separated)', type: 'string' },
             helpGroupsId: { title: 'Support Members - GroupsID (comma separated)', type: 'string' },
             helpIgnoredGroupsId: { title: 'Group ignored on support channels - GroupsID (comma separated)', type: 'string' },
             helpUserNotification: {title: 'Message to user waiting support - s0 for Username, s1 for Staff Online', type: 'string',
@@ -67,23 +67,31 @@ registerPlugin(
             staffOnlineChannelName: {title: 'Name of staff online channel - s0 is online number', type: 'string',
                 placeholder: "Staff Online: s0"},
             registerGroupId: {title: 'Registration Group Id', type: 'number'},
-            registerWelcomeMessage: {title: 'Welcome message for user without register group', type: 'string'},
+            registerWelcomeMessage: {title: 'Welcome message for user without register group', type: 'multiline'},
             registerMessageType: {title: 'Type of message poke or chat', type: 'select',
                 options: ['Poke', 'Chat']},
             registerMessageOn: {title: 'Turn on or off welcome message poke or chat', type: 'select',
-                options: ['Off', 'On']}
+                options: ['On', 'Off']},
+            autoMusicCodecBot: {title: 'Change codec of channel to music when bot joins?', type: 'select',
+                options: ['On', 'Off']},
+            autoMusicCodecNew: {title: 'Codec and quality to set on channel with bot joins - syntax: (codecId:quality), example for opus music (6:10)', type: 'string',
+                placeholder: 'Default (6:10)'}
         }
     },
     function(sinusbot, config, info)
     {
-        sinusbot.log('Loading ' + info.name + ' version:' + info.version + '  - powered by ' + info.author);
+        sinusbot.log('Loading ' + info.name + ' version: ' + info.version + '  - powered by ' + info.author);
         sinusbot.log('Do not forget to check all settings!');
 
         //Some defaults handling
+        if(isUndefined(config.autoMusicCodecNew))
+            config.autoMusicCodecNew = '5:10';
+
         var helpChannelsId = config.helpChannelsId.split(",");
         var helpGroupsId = config.helpGroupsId.split(',');
         var helpIgnoredGroupsId = config.helpIgnoredGroupsId.split(',');
         var autoTempChannelsId = config.autoTempChannelsId.split(',');
+        var autoMusicCodecNew = config.autoMusicCodecNew.split(':');
 
         var self = sinusbot.getBotId();
 
@@ -92,6 +100,8 @@ registerPlugin(
         sinusbot.setVar('onChannelCreate', []);
         sinusbot.setVar('onlineClients', 1);
         sinusbot.setVar('usersOnHelp', []);
+        sinusbot.setVar('channelCodec', []);
+        sinusbot.setVar('botMove' + self, {});
 
         var staff = sinusbot.getVar('staff');
 
@@ -103,6 +113,16 @@ registerPlugin(
             config.helpStaffAwayTime = 60;
         if(isUndefined(config.botChecksPerMinute) || config.botChecksPerMinute < 0)
             config.botChecksPerMinute = 1;
+        if(isUndefined(config.botAIPrivateChat))
+            config.botAIPrivateChat = 1;
+        if(isUndefined(config.botAIPoke))
+            config.botAIPoke = 1;
+        if(isUndefined(config.registerMessageType))
+            config.registerMessageType = 1;
+        if(isUndefined(config.registerMessageOn))
+            config.registerMessageOn = 1;
+        if(isUndefined(config.autoMusicCodecBot))
+            config.autoMusicCodecBot = 1;
         if(isUndefined(sinusbot.getVar("maxOnlineRecord")))
             sinusbot.setVar("maxOnlineRecord", 0);
         if(isUndefined(config.helpUserNotification))
@@ -503,6 +523,51 @@ registerPlugin(
          */
         sinusbot.on('api:event', function (data) {
             return sinusbot.getVar('staff').length;
+        });
+
+        /*
+         Event will handle bot joining to channel and change codec automatically if autoMusicCodecBot is On
+         */
+        sinusbot.on('botMove', function (info) {
+            if(config.autoMusicCodecBot == 0) {
+                var channelCodec = sinusbot.getVar('channelCodec');
+                var botMove = sinusbot.getVar('botMove' + self);
+                if (info.newChannel != 0) {
+                    if (isEmpty(botMove)) {
+                        botMove = {newChannel: info.newChannel, oldChannel: 0};
+                    } else {
+                        botMove = {newChannel: info.newChannel, oldChannel: botMove.newChannel};
+                    }
+
+                    var channel = getChannelParams(info.newChannel);
+                    channelCodec.push({id: info.newChannel, codec: channel.codec, quality: channel.quality});
+                    channelUpdate(info.newChannel, {
+                        codec: parseInt(autoMusicCodecNew[0]),
+                        quality: parseInt(autoMusicCodecNew[1])
+                    });
+                }
+                if (botMove.oldChannel != 0) {
+                    var codec = 4;
+                    var quality = 6;
+                    for (var i = 0; i < channelCodec.length; i++) {
+                        if (channelCodec[i].id == botMove.oldChannel) {
+                            codec = channelCodec[i].codec;
+                            quality = channelCodec[i].quality;
+                            break;
+                        }
+                    }
+                    channelUpdate(botMove.oldChannel, {codec: codec, quality: quality});
+                    channelCodec = removeFromArray(channelCodec, {
+                        id: botMove.oldChannel,
+                        codec: codec,
+                        quality: quality
+                    });
+                }
+
+
+                sinusbot.setVar('botMove' + self, botMove);
+                sinusbot.setVar('channelCodec', channelCodec);
+            }
         });
 
         /*

@@ -16,6 +16,7 @@ UseTS-AdminBOT is multifunctional bot script in ECMAScript 5 (JavaScript) to use
   - Max Users Online automatic channel.
   - Users tracking system.
   - Channels activity logging system.
+  - Automatic codec and quality change when bot joins channel and set it but after leave.
   
 ##### Commands
  By Private Chat to Bot
@@ -40,15 +41,12 @@ Permissions
 - Channel>Access
 - Group>Information
 
-### Version
-0.1.1
-
 ### Installation
 You need Sinusbot installed:
 ```
 1. Download UseTSAdminBOT.js and place it in scripts folder.
 2. Restart Sinusbot.
-3. Go to Scripts TAB enable and set all settings for script.
+3. Go to Scripts TAB enable and set all settings for script. (if you want use default messages templates just leave like they are in form)
 That's it!
 ```
 ### Development
@@ -62,7 +60,6 @@ Just make sure you're using latest version of Sinusbot and make Pull Request wit
 - https://forum.sinusbot.com/threads/request-close-channels.1225/
 - Support channels can have special description about admins or special channel can have that one. (soon*)
 - Auto add user to specific group joining specific channel.
-- Better defaults setting handling.
 - Bot flood check.
 - Implement bot api over php only.
 - Message when bot is busy.
@@ -85,6 +82,7 @@ Just make sure you're using latest version of Sinusbot and make Pull Request wit
 - Channels names restrictions.
 - Bot help menu.
 - Better scripts settings reloading handling.
+- Script full page for management and settings.
 
 (soon*) because of waiting for new functions in next Sinusbot version
 

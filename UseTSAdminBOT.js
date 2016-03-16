@@ -39,7 +39,8 @@ registerPlugin(
                 placeholder: 'Default 60 seconds'},
             helpStaffJoined: {title: 'Message to staff when someone of them join to help user - s0 for Username of helper, s1 for Username of user', type: 'string',
                 placeholder: 'Staff member [b]s0[/b] joined to help [b]s1[/b].'},
-            helpNotificationType: {title: 'Support notification type', type: 'select', options: ['Chat','Poke']},
+            helpStaffNotificationType: {title: 'Support (staff users) notification type', type: 'select', options: ['Chat','Poke']},
+            helpUsersNotificationType: {title: 'Support (normal users) notification type', type: 'select', options: ['Chat','Poke']},
             autoTempChannelsId: {title: 'Auto temporary channels (comma separated)', type: 'string' },
             autoTempChannelsParentId: {title: 'Auto temporary channels parent', type: 'channel' },
             autoTempChannelsName: {title: 'Automatic temporary channel name - s0 is channel number', type: 'string',
@@ -113,6 +114,10 @@ registerPlugin(
             config.helpStaffAwayTime = 60;
         if(isUndefined(config.botChecksPerMinute) || config.botChecksPerMinute < 0)
             config.botChecksPerMinute = 1;
+        if(isUndefined(config.helpStaffNotificationType))
+            config.helpStaffNotificationType = 0;
+        if(isUndefined(config.helpUsersNotificationType))
+            config.helpUsersNotificationType = 0;
         if(isUndefined(config.botAIPrivateChat))
             config.botAIPrivateChat = 1;
         if(isUndefined(config.botAIPoke))
@@ -183,21 +188,29 @@ registerPlugin(
             {
                 if(isIgnored == false) {
                     if (isUndefined(staff) || staff.length <= 0) {
-                        sendUserNotification(config.helpNotificationType, e.clientId, replaceSNVariables(config.helpUserNotification2, e.clientNick));
-                        usersOnHelp.push({clientId: e.clientId, clientNick: e.clientNick, newChannel: e.newChannel, oldChannel: e.oldChannel, action: 1, staffReaction: false});
+                        sendUserNotification(config.helpUsersNotificationType, e.clientId, replaceSNVariables(config.helpUserNotification2, e.clientNick));
+                        usersOnHelp.push({clientId: e.clientId, clientUid: e.clientUid, clientNick: e.clientNick, newChannel: e.newChannel, oldChannel: e.oldChannel, action: 1, staffReaction: false});
                     } else {
                         staff.forEach(function (staffClientId) {
-                            sendUserNotification(config.helpNotificationType, staffClientId, replaceSNVariables(config.helpStaffNotification, e.clientNick, staff.length));
+                            var message = replaceSNVariables(config.helpStaffNotification, e.clientNick, staff.length);
+                            if(config.helpStaffNotificationType == 0) {
+                                message = replaceSNVariables(
+                                    config.helpStaffNotification,
+                                    '[URL=client://0/' + e.clientUid + ']' + e.clientNick + '[/URL]',
+                                    staff.length
+                                );
+                            }
+                            sendUserNotification(config.helpStaffNotificationType, staffClientId, message);
                         });
-                        sendUserNotification(config.helpNotificationType, e.clientId, replaceSNVariables(config.helpUserNotification, e.clientNick, staff.length));
-                        usersOnHelp.push({clientId: e.clientId, clientNick: e.clientNick, newChannel: e.newChannel, oldChannel: e.oldChannel, action: 2, staffReaction: false});
+                        sendUserNotification(config.helpUsersNotificationType, e.clientId, replaceSNVariables(config.helpUserNotification, e.clientNick, staff.length));
+                        usersOnHelp.push({clientId: e.clientId, clientUid: e.clientUid, clientNick: e.clientNick, newChannel: e.newChannel, oldChannel: e.oldChannel, action: 2, staffReaction: false});
                         if (config.helpStaffAwayTime > 0) {
                             setTimeout(function () {
                                 var userOnHelpF = sinusbot.getVar('usersOnHelp');
                                 for(var i = 0; i < userOnHelpF.length; i++) {
                                     var user = userOnHelpF[i];
                                     if (user.clientId == e.clientId && user.staffReaction != true) {
-                                        sendUserNotification(config.helpNotificationType, e.clientId, config.helpStaffAway);
+                                        sendUserNotification(config.helpUsersNotificationType, e.clientId, config.helpStaffAway);
                                     }
                                 }
                             }, 1000 * config.helpStaffAwayTime);
@@ -211,7 +224,15 @@ registerPlugin(
                         if (user.newChannel == e.newChannel && user.staffReaction != true) {
                             staff.forEach(function (staffClientId) {
                                 if(staffClientId != e.clientId) {
-                                    sendUserNotification(config.helpNotificationType, staffClientId, replaceSNVariables(config.helpStaffJoined, e.clientNick, user.clientNick));
+                                    var message = replaceSNVariables(config.helpStaffJoined, e.clientNick, user.clientNick);
+                                    if(config.helpStaffNotificationType == 0) {
+                                        message = replaceSNVariables(
+                                            config.helpStaffJoined,
+                                            '[URL=client://0/' + e.clientUid + ']' + e.clientNick + '[/URL]',
+                                            '[URL=client://0/' + user.clientUid + ']' + user.clientNick + '[/URL]'
+                                        );
+                                    }
+                                    sendUserNotification(config.helpStaffNotificationType, staffClientId, message);
                                 }
                             });
                             user.staffReaction = true;
@@ -521,7 +542,7 @@ registerPlugin(
         /*
          Web Data API Event
          */
-        sinusbot.on('api:event', function (data) {
+        sinusbot.on('api:web', function (data) {
             return sinusbot.getVar('staff').length;
         });
 

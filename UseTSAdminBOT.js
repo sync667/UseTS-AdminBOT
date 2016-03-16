@@ -27,6 +27,10 @@ registerPlugin(
             helpChannelsId: { title: 'Support Channels - IDs (comma separated)', type: 'string' },
             helpGroupsId: { title: 'Support Members - GroupsID (comma separated)', type: 'string' },
             helpIgnoredGroupsId: { title: 'Group ignored on support channels - GroupsID (comma separated)', type: 'string' },
+            helpCloseNoStaff: {title: 'Should support channels should be closed when no staff online?', type: 'select',
+                options: ['Yes', 'No']},
+            helpClosePrefix: {title: 'Prefix added to channel name when closed (must be short, because of chars limit)', type: 'string',
+                placeholder: '(Closed)'},
             helpUserNotification: {title: 'Message to user waiting support - s0 for Username, s1 for Staff Online', type: 'string',
                 placeholder: 'Hi [b]s0[/b]! Staff member will help you soon! [b]Online staff:[/b] s1'},
             helpUserNotification2: {title: 'Message to user when no staff online - s0 for Username', type: 'string',
@@ -100,6 +104,7 @@ registerPlugin(
         var self = sinusbot.getBotId();
 
         sinusbot.setVar('staff', []);
+        sinusbot.setVar('helpClosed', 0);
         sinusbot.setVar('tempChannels', []);
         sinusbot.setVar('onChannelCreate', []);
         sinusbot.setVar('onlineClients', 1);
@@ -117,6 +122,8 @@ registerPlugin(
             config.helpStaffAwayTime = 60;
         if (isUndefined(config.botChecksPerMinute) || config.botChecksPerMinute < 0)
             config.botChecksPerMinute = 1;
+        if (isUndefined(config.helpCloseNoStaff))
+            config.helpCloseNoStaff = 1;
         if (isUndefined(config.helpStaffNotificationType))
             config.helpStaffNotificationType = 0;
         if (isUndefined(config.helpUsersNotificationType))
@@ -133,6 +140,8 @@ registerPlugin(
             config.autoMusicCodecBot = 1;
         if (isUndefined(sinusbot.getVar("maxOnlineRecord")))
             sinusbot.setVar("maxOnlineRecord", 0);
+        if (isUndefined(config.helpClosePrefix))
+            config.helpClosePrefix = "(Closed)";
         if (isUndefined(config.helpUserNotification))
             config.helpUserNotification = "Hi [b]s0[/b]! Staff member will help you soon! [b]Online staff:[/b] s1";
         if (isUndefined(config.helpUserNotification2))
@@ -165,6 +174,7 @@ registerPlugin(
          */
         sinusbot.on('clientMove', function (e) {
             var isStaff = haveGroupFromArray(e, helpGroupsId);
+            var isHelpClosed = sinusbot.getVar('helpClosed');
             var isIgnored = haveGroupFromArray(e, helpIgnoredGroupsId);
             var staff = sinusbot.getVar('staff');
             var usersOnHelp = sinusbot.getVar('usersOnHelp');
@@ -182,6 +192,29 @@ registerPlugin(
 
                 if (getUserChannelId(clientId) == 0) {
                     staff = removeFromArray(staff, clientId);
+                }
+            }
+
+            if(config.helpCloseNoStaff == 0) {
+                sinusbot.log(staff.length + 'd' + isHelpClosed);
+                if (staff.length == 0 && isHelpClosed == 0) {
+                    for (var i = 0; i < helpChannelsId.length; i++) {
+                        var channel = getChannelParams(parseInt(helpChannelsId[i]));
+                        if (channel == false)
+                            continue;
+                        var newName = config.helpClosePrefix + channel.name;
+                        channelUpdate(channel.id, {name: newName, maxClients: 0});
+                    }
+                    sinusbot.setVar('helpClosed', 1);
+                } else if (staff.length > 0 && isHelpClosed == 1) {
+                    for (var i = 0; i < helpChannelsId.length; i++) {
+                        var channel = getChannelParams(parseInt(helpChannelsId[i]));
+                        if (channel == false)
+                            continue;
+                        var newName = channel.name.substring(config.helpClosePrefix.length);
+                        channelUpdate(channel.id, {name: newName, maxClients: -1});
+                    }
+                    sinusbot.setVar('helpClosed', 0);
                 }
             }
 

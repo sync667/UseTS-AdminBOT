@@ -8,6 +8,7 @@ UseTS-AdminBOT is multifunctional bot script in ECMAScript 5 (JavaScript) to use
     - User will get notification that staff was informed.
     - After specific time in settings user will be informed that staff is away if no one of them take help action.
     - If any staff user will go to help user rest of them will get information about that.
+    - Handling staff away mode. (it's little tricky because user after set away mode have to change channel, sinusbot don't have event to handle that better)
   - Support channel with automatic name + online staff members information.
   - Automatic temporary channels secure system by user joining specific channels.
   - Bots with AI so you can talk with them!

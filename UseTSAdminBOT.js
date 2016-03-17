@@ -29,6 +29,8 @@ registerPlugin(
             helpIgnoredGroupsId: { title: 'Group ignored on support channels - GroupsID (comma separated)', type: 'string' },
             helpCloseNoStaff: {title: 'Should support channels should be closed when no staff online?', type: 'select',
                 options: ['Yes', 'No']},
+            helpAwayMode: {title: 'Should staff with away status be excluded from online support?', type: 'select',
+                options: ['Yes', 'No']},
             helpClosePrefix: {title: 'Prefix added to channel name when closed (must be short, because of chars limit)', type: 'string',
                 placeholder: '(Closed)'},
             helpUserNotification: {title: 'Message to user waiting support - s0 for Username, s1 for Staff Online', type: 'string',
@@ -82,8 +84,8 @@ registerPlugin(
                 options: ['On', 'Off']},
             autoMusicCodecBot: {title: 'Change codec of channel to music when bot joins?', type: 'select',
                 options: ['On', 'Off']},
-            autoMusicCodecNew: {title: 'Codec and quality to set on channel with bot joins - syntax: (codecId:quality), example for opus music (6:10)', type: 'string',
-                placeholder: 'Default (6:10)'}
+            autoMusicCodecNew: {title: 'Codec and quality to set on channel with bot joins - syntax: "codecId:quality", example for opus music "5:10"', type: 'string',
+                placeholder: '5:10'}
         }
     },
     function(sinusbot, config, info) {
@@ -124,6 +126,8 @@ registerPlugin(
             config.botChecksPerMinute = 1;
         if (isUndefined(config.helpCloseNoStaff))
             config.helpCloseNoStaff = 1;
+        if (isUndefined(config.helpAwayMode))
+            config.helpAwayMode = 1;
         if (isUndefined(config.helpStaffNotificationType))
             config.helpStaffNotificationType = 0;
         if (isUndefined(config.helpUsersNotificationType))
@@ -179,11 +183,14 @@ registerPlugin(
             var staff = sinusbot.getVar('staff');
             var usersOnHelp = sinusbot.getVar('usersOnHelp');
 
+            if(config.helpAwayMode == 0 && e.client.away == 1)
+                isStaff = false;
+
             if (isStaff) {
                 if (staff.indexOf(e.clientId) == -1) {
                     staff.push(e.clientId);
                 }
-            } else if (staff.indexOf(e.clientId) >= 0) {
+            } else if (staff.indexOf(e.clientId) != -1) {
                 staff = removeFromArray(staff, e.clientId);
             }
 
@@ -196,7 +203,6 @@ registerPlugin(
             }
 
             if(config.helpCloseNoStaff == 0) {
-                sinusbot.log(staff.length + 'd' + isHelpClosed);
                 if (staff.length == 0 && isHelpClosed == 0) {
                     for (var i = 0; i < helpChannelsId.length; i++) {
                         var channel = getChannelParams(parseInt(helpChannelsId[i]));
@@ -326,10 +332,6 @@ registerPlugin(
                             channelName = tempChannelName;
                             break;
                         }
-                    }
-
-                    if (autoTempChannelParentId == 0) {
-                        sinusbot.log('You do not set parent channel. I will create new channels at bottom.');
                     }
 
                     channelCreate({
@@ -492,11 +494,11 @@ registerPlugin(
                     maxOnlineClientsChannel(clients);
                     sinusbot.setVar("maxOnlineRecord", clients);
                 }
+            }
 
-                //Staff Groups bypass
-                if (haveGroupFromArray(e, helpGroupsId)) {
-                    staffOnlineChannel(sinusbot.getVar('staff').length);
-                }
+            //Staff Groups bypass
+            if (haveGroupFromArray(e, helpGroupsId)) {
+                staffOnlineChannel(sinusbot.getVar('staff').length);
             }
         });
 
@@ -583,7 +585,8 @@ registerPlugin(
                                     break;
                             }
 
-                            chatPrivate(chat.clientId, 'Date: ' + new Date(logEntry[0]).toISOString() + '/ClientId: ' + logEntry[1] + '/ClientName: ' + logEntry[2] + '/OldChannel: '
+                            chatPrivate(chat.clientId, 'Date: ' + new Date(logEntry[0]).toISOString() + '/ClientId: '
+                                + logEntry[1] + '/ClientName: ' + logEntry[2] + '/OldChannel: '
                                 + logEntry[3] + '/NewChannel: ' + logEntry[4] + '/' + entryType);
                         }
                         chatPrivate(chat.clientId, 'All records - ' + channelLog.length);

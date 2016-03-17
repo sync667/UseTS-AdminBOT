@@ -20,7 +20,7 @@
 registerPlugin(
     {
         name: 'UseTS-AdminBOT',
-        version: '0.2.0',
+        version: '0.2.2',
         description: 'Many administration functions in one plugin.',
         author: 'sync667',
         vars: {
@@ -62,7 +62,7 @@ registerPlugin(
                 placeholder: 'Sorry! You are not allowed to get temporary channel.'},
             autoTempChannelsErrorMessage: {title: 'Message to user about auto temp channel creation error', type: 'string',
                 placeholder: "I can't created temporary channel for you right now, try later."},
-            botChecksPerMinute: {title: 'How many times per minute bot will do checks (optimal is 6)', type: 'number'},
+            botChecksEvery: {title: 'Every x seconds bot will do checks (optimal is 60)', type: 'number'},
             botAIPrivateChat: {title: 'Should bot use his AI to replay for private chat messages to user?', type: 'select',
                 options: ['Yes', 'No']},
             botAIPoke: {title: 'Should bot use his AI to replay for poke messages to user?', type: 'select',
@@ -92,38 +92,38 @@ registerPlugin(
         sinusbot.log('Loading ' + info.name + ' version: ' + info.version + '  - powered by ' + info.author);
         sinusbot.log('Do not forget to check all settings!');
 
-        //Some defaults handling
-        if (isUndefined(config.autoMusicCodecNew))
-            config.autoMusicCodecNew = '5:10';
-
-        var helpChannelsId = config.helpChannelsId.split(",");
-        var helpGroupsId = config.helpGroupsId.split(',');
-        var helpIgnoredGroupsId = config.helpIgnoredGroupsId.split(',');
-        var autoTempChannelsId = config.autoTempChannelsId.split(',');
-        var autoTempChannelsRestrictedGroups = config.autoTempChannelsRestrictedGroups.split(':');
-        var autoMusicCodecNew = config.autoMusicCodecNew.split(':');
-
-        var self = sinusbot.getBotId();
-
         sinusbot.setVar('staff', []);
-        sinusbot.setVar('helpClosed', 0);
-        sinusbot.setVar('tempChannels', []);
         sinusbot.setVar('onChannelCreate', []);
         sinusbot.setVar('onlineClients', 1);
         sinusbot.setVar('usersOnHelp', []);
         sinusbot.setVar('channelCodec', []);
         sinusbot.setVar('botMove' + self, {});
+        sinusbot.setVar("helpClosed", 0);
 
+        var self = sinusbot.getBotId();
         var staff = sinusbot.getVar('staff');
 
+        //Defaults values handling
+        if (isUndefined(config.helpChannelsId))
+            config.helpChannelsId = '-1';
+        if (isUndefined(config.helpGroupsId))
+            config.helpGroupsId = '-1';
+        if (isUndefined(config.helpIgnoredGroupsId))
+            config.helpIgnoredGroupsId = '-1';
+        if (isUndefined(config.helpStaffAwayTime) || config.helpStaffAwayTime < 0)
+            config.helpStaffAwayTime = 60;
+        if (isUndefined(config.autoTempChannelsId))
+            config.autoTempChannelsId = '-1';
         if (isUndefined(config.autoTempChannelsParentId) || parseInt(config.autoTempChannelsParentId) < 0)
             config.autoTempChannelsParentId = 0;
+        if (isUndefined(config.autoTempChannelsRestrictedGroups))
+            config.autoTempChannelsRestrictedGroups = -1;
         if (isUndefined(config.autoTempChannelsPassLength) || config.autoTempChannelsPassLength < 0)
             config.autoTempChannelsPassLength = 4;
         if (isUndefined(config.helpStaffAwayTime) || config.helpStaffAwayTime < 0)
             config.helpStaffAwayTime = 60;
-        if (isUndefined(config.botChecksPerMinute) || config.botChecksPerMinute < 0)
-            config.botChecksPerMinute = 1;
+        if (isUndefined(config.botChecksEvery) || config.botChecksEvery < 0)
+            config.botChecksEvery = 60;
         if (isUndefined(config.helpCloseNoStaff))
             config.helpCloseNoStaff = 1;
         if (isUndefined(config.helpAwayMode))
@@ -144,6 +144,8 @@ registerPlugin(
             config.autoMusicCodecBot = 1;
         if (isUndefined(sinusbot.getVar("maxOnlineRecord")))
             sinusbot.setVar("maxOnlineRecord", 0);
+        if (isUndefined(sinusbot.getVar("tempChannels")))
+            sinusbot.setVar("tempChannels", []);
         if (isUndefined(config.helpClosePrefix))
             config.helpClosePrefix = "(Closed)";
         if (isUndefined(config.helpUserNotification))
@@ -172,6 +174,36 @@ registerPlugin(
             config.maxOnlineUsersChannel = "Max Users Online: s0";
         if (isUndefined(config.staffOnlineChannelName))
             config.staffOnlineChannelName = "Staff Online: s0";
+        if (isUndefined(config.autoMusicCodecNew))
+            config.autoMusicCodecNew = '5:10';
+
+        try {
+            var helpChannelsId = config.helpChannelsId.split(",");
+            var helpGroupsId = config.helpGroupsId.split(',');
+            var helpIgnoredGroupsId = config.helpIgnoredGroupsId.split(',');
+            var autoTempChannelsId = config.autoTempChannelsId.split(',');
+            var autoTempChannelsRestrictedGroups = config.autoTempChannelsRestrictedGroups.split(',');
+            var autoMusicCodecNew = config.autoMusicCodecNew.split(':');
+        } catch (e) {
+            sinusbot.log('Your configuration is wrong! Check if you typed correct values.');
+            sinusbot.log('START - Error code: ' + e);
+            sinusbot.log('Setting1: ' + config.helpChannelsId);
+            sinusbot.log('Setting2: ' + config.helpGroupsId);
+            sinusbot.log('Setting3: ' + config.helpIgnoredGroupsId);
+            sinusbot.log('Setting4: ' + config.autoTempChannelsId);
+            sinusbot.log('Setting5: ' + config.autoTempChannelsRestrictedGroups);
+            sinusbot.log('Setting6: ' + config.autoMusicCodecNew);
+            sinusbot.log('END ---------------------- END');
+
+            //Temp again defaults
+            helpChannelsId = -1;
+            helpGroupsId = -1;
+            helpIgnoredGroupsId = -1;
+            autoTempChannelsId = -1;
+            autoTempChannelsRestrictedGroups = -1;
+            autoMusicCodecNew[0] = 5;
+            autoMusicCodecNew[1] = 10;
+        }
 
         /*
          Support Channels auto poke function event section
@@ -190,7 +222,7 @@ registerPlugin(
                 if (staff.indexOf(e.clientId) == -1) {
                     staff.push(e.clientId);
                 }
-            } else if (staff.indexOf(e.clientId) != -1) {
+            } else if (staff.indexOf(e.clientId) >= 0) {
                 staff = removeFromArray(staff, e.clientId);
             }
 
@@ -408,7 +440,7 @@ registerPlugin(
             }
             sinusbot.setVar("tempChannels", tempChannels);
 
-        }, 60000 * config.botChecksPerMinute);
+        }, 1000 * config.botChecksEvery);
 
         /*
          Bot AI and commands, event for chat
@@ -723,13 +755,13 @@ registerPlugin(
                 group = parseInt(group);
             }
 
-            var result = !e.clientServerGroups.every(function (group2) {
-                if (group2.i == group) {
-                    return false;
-                } else {
-                    return true;
+            var result = false;
+            for (var i = 0; i < e.clientServerGroups.length; i++) {
+                if (e.clientServerGroups[i].i == group) {
+                    result = true;
+                    break;
                 }
-            });
+            }
 
             return result;
         }
@@ -738,17 +770,18 @@ registerPlugin(
          If user have specific group of clientServerGroups from input array
          */
         function haveGroupFromArray(e, arrayGroups) {
-            var result = !arrayGroups.every(function (group) {
+            var result = false;
+
+            for (var i = 0; i < arrayGroups.length; i++) {
+                var group = arrayGroups[i];
                 if (typeof(group) != 'number') {
                     group = parseInt(group);
                 }
-
                 if (haveGroupOnServer(e, group)) {
-                    return false;
-                } else {
-                    return true;
+                    result = true;
+                    break;
                 }
-            });
+            }
 
             return result;
         }
@@ -757,17 +790,18 @@ registerPlugin(
          If user have specific group from input array
          */
         function haveSpecificGroupFromArray(groupId, arrayGroups) {
-            var result = !arrayGroups.every(function (group) {
+            var result = false;
+            for (var i = 0; i < arrayGroups.length; i++) {
+                var group = arrayGroups[i];
                 if (typeof(group) != 'number') {
                     group = parseInt(group);
                 }
 
                 if (groupId == group) {
-                    return false;
-                } else {
-                    return true;
+                    result = true;
+                    break;
                 }
-            });
+            }
 
             return result;
         }
@@ -792,7 +826,7 @@ registerPlugin(
         function getChannelId(channelName, parentId) {
             var channels = getChannels();
             for (var i = 0; i < channels.length; i++) {
-                if (channels[i].name === channelName && channels[i].parent == parentId) {
+                if (channels[i].name == channelName && channels[i].parent == parentId) {
                     return channels[i].id;
                 }
             }
@@ -805,8 +839,9 @@ registerPlugin(
         function getChannelParams(channelId, channelName, parentId) {
             var channels = getChannels();
             for (var i = 0; i < channels.length; i++) {
-                if (channels[i].id === channelId || channels[i].name === channelName && channels[i].parent == parentId) {
-                    return channels[i];
+                var channel = channels[i];
+                if (channel.id == channelId || (channel.name == channelName && channel.parent == parentId)) {
+                    return channel;
                 }
             }
             return false;
@@ -816,17 +851,19 @@ registerPlugin(
          Function return status of new user channel if it is one from array
          */
         function isChannelInArray(channel, array) {
-            var result = !array.every(function (id) {
+            var result = false;
+
+            for (var i = 0; i < array.length; i++) {
+                var id = array[i];
                 if (typeof(id) != 'number') {
                     id = parseInt(id);
                 }
 
                 if (channel == id) {
-                    return false;
-                } else {
-                    return true;
+                    result = true;
+                    break;
                 }
-            });
+            }
             return result;
         }
 

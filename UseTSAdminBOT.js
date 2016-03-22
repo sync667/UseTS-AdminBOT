@@ -45,8 +45,10 @@ registerPlugin(
                 placeholder: 'Default 60 seconds'},
             helpStaffJoined: {title: 'Message to staff when someone of them join to help user - s0 for Username of helper, s1 for Username of user', type: 'string',
                 placeholder: 'Staff member [b]s0[/b] joined to help [b]s1[/b].'},
-            helpStaffNotificationType: {title: 'Support (staff users) notification type', type: 'select', options: ['Chat','Poke']},
-            helpUsersNotificationType: {title: 'Support (normal users) notification type', type: 'select', options: ['Chat','Poke']},
+            helpStaffNotificationType: {title: 'Support (staff users) notification type', type: 'select',
+                options: ['Chat','Poke']},
+            helpUsersNotificationType: {title: 'Support (normal users) notification type', type: 'select',
+                options: ['Chat','Poke']},
             autoTempChannelsId: {title: 'Auto temporary channels (comma separated)', type: 'string' },
             autoTempChannelsParentId: {title: 'Auto temporary channels parent', type: 'channel' },
             autoTempChannelsRestrictedGroups: {title: 'Groups that are not allowed to get temporary channels - IDs (comma separated)', type: 'string'},
@@ -56,6 +58,8 @@ registerPlugin(
                 placeholder: 'I created temporary channel as you wish!'},
             autoTempChannelsPassMessage: {title: 'Message to user about auto temporary chanel password - s0 is password', type: 'string',
                 placeholder: 'Your channel password: [b]s0[/b]'},
+            autoTempChannelsPass: {title: 'Automatic temporary channel password length', type: 'select',
+                options: ['On', 'Off']},
             autoTempChannelsPassLength: {title: 'Automatic temporary channel password length', type: 'number',
                 placeholder: '4'},
             autoTempChannelsRestricted: {title: 'Message when users is not permitted do get temporary channel', type: 'string',
@@ -84,8 +88,8 @@ registerPlugin(
                 options: ['On', 'Off']},
             autoMusicCodecBot: {title: 'Change codec of channel to music when bot joins?', type: 'select',
                 options: ['On', 'Off']},
-            autoMusicCodecNew: {title: 'Codec and quality to set on channel with bot joins - syntax: "codecId:quality", example for opus music "5:10"', type: 'string',
-                placeholder: '5:10'}
+            autoMusicCodecNew: {title: 'Codec and quality to set on channel with bot joins - syntax: "codecId#quality", example for opus music "5#10"', type: 'string',
+                placeholder: '5#10'}
         }
     },
     function(sinusbot, config, info) {
@@ -105,19 +109,21 @@ registerPlugin(
 
         //Defaults values handling
         if (isUndefined(config.helpChannelsId))
-            config.helpChannelsId = '-1';
+            config.helpChannelsId = -1;
         if (isUndefined(config.helpGroupsId))
-            config.helpGroupsId = '-1';
+            config.helpGroupsId = -1;
         if (isUndefined(config.helpIgnoredGroupsId))
-            config.helpIgnoredGroupsId = '-1';
+            config.helpIgnoredGroupsId = -1;
         if (isUndefined(config.helpStaffAwayTime) || config.helpStaffAwayTime < 0)
             config.helpStaffAwayTime = 60;
         if (isUndefined(config.autoTempChannelsId))
-            config.autoTempChannelsId = '-1';
+            config.autoTempChannelsId = -1;
         if (isUndefined(config.autoTempChannelsParentId) || parseInt(config.autoTempChannelsParentId) < 0)
             config.autoTempChannelsParentId = 0;
         if (isUndefined(config.autoTempChannelsRestrictedGroups))
             config.autoTempChannelsRestrictedGroups = -1;
+        if (isUndefined(config.autoTempChannelsPass))
+            config.autoTempChannelsPass = 1;
         if (isUndefined(config.autoTempChannelsPassLength) || config.autoTempChannelsPassLength < 0)
             config.autoTempChannelsPassLength = 4;
         if (isUndefined(config.helpStaffAwayTime) || config.helpStaffAwayTime < 0)
@@ -175,18 +181,19 @@ registerPlugin(
         if (isUndefined(config.staffOnlineChannelName))
             config.staffOnlineChannelName = "Staff Online: s0";
         if (isUndefined(config.autoMusicCodecNew))
-            config.autoMusicCodecNew = '5:10';
+            config.autoMusicCodecNew = '5#10';
 
         try {
-            var helpChannelsId = config.helpChannelsId.split(",");
-            var helpGroupsId = config.helpGroupsId.split(',');
-            var helpIgnoredGroupsId = config.helpIgnoredGroupsId.split(',');
-            var autoTempChannelsId = config.autoTempChannelsId.split(',');
-            var autoTempChannelsRestrictedGroups = config.autoTempChannelsRestrictedGroups.split(',');
-            var autoMusicCodecNew = config.autoMusicCodecNew.split(':');
+            var helpChannelsId = config.helpChannelsId.toString().split(',');
+            var helpGroupsId = config.helpGroupsId.toString().split(',');
+            var helpIgnoredGroupsId = config.helpIgnoredGroupsId.toString().split(',');
+            var autoTempChannelsId = config.autoTempChannelsId.toString().split(',');
+            var autoTempChannelsRestrictedGroups = config.autoTempChannelsRestrictedGroups.toString().split(',');
+            var autoMusicCodecNew = config.autoMusicCodecNew.toString().split('#');
         } catch (e) {
             sinusbot.log('Your configuration is wrong! Check if you typed correct values.');
             sinusbot.log('START - Error code: ' + e);
+            sinusbot.log('Line: ' + e.lineNumber + ' Column: ' + e.columnNumber);
             sinusbot.log('Setting1: ' + config.helpChannelsId);
             sinusbot.log('Setting2: ' + config.helpGroupsId);
             sinusbot.log('Setting3: ' + config.helpIgnoredGroupsId);
@@ -201,8 +208,7 @@ registerPlugin(
             helpIgnoredGroupsId = -1;
             autoTempChannelsId = -1;
             autoTempChannelsRestrictedGroups = -1;
-            autoMusicCodecNew[0] = 5;
-            autoMusicCodecNew[1] = 10;
+            autoMusicCodecNew = [5,10];
         }
 
         /*
@@ -366,7 +372,7 @@ registerPlugin(
                         }
                     }
 
-                    channelCreate({
+                    var channel = {
                         name: channelName,
                         parent: autoTempChannelParentId,
                         password: channelPassword,
@@ -375,9 +381,7 @@ registerPlugin(
                         perm: 0,
                         sperm: 1,
                         default: 0
-                    });
-
-                    var onChannelCreate = sinusbot.getVar("onChannelCreate");
+                    };
 
                     var channelCreated = {
                         channelName: channelName,
@@ -385,6 +389,15 @@ registerPlugin(
                         creator: e,
                         password: channelPassword
                     };
+
+                    if(config.autoTempChannelsPass == 1) {
+                        channel.password = '';
+                        channelCreated.password = '';
+                    }
+
+                    channelCreate(channel);
+
+                    var onChannelCreate = sinusbot.getVar("onChannelCreate");
 
                     if (!isUndefined(onChannelCreate) || onChannelCreate.indexOf(channelCreated) == -1) {
                         onChannelCreate.push(channelCreated);
@@ -411,7 +424,9 @@ registerPlugin(
                         sinusbot.setVar("tempChannels", tempChannels);
                         move(onChannelCreate[i].creator.clientId, channel.id);
                         chatPrivate(onChannelCreate[i].creator.clientId, config.autoTempChannelsMessage);
-                        chatPrivate(onChannelCreate[i].creator.clientId, replaceSNVariables(config.autoTempChannelsPassMessage, onChannelCreate[i].password));
+                        if(config.autoTempChannelsPass == 0) {
+                            chatPrivate(onChannelCreate[i].creator.clientId, replaceSNVariables(config.autoTempChannelsPassMessage, onChannelCreate[i].password));
+                        }
                     } else {
                         sinusbot.log('Something goes wrong when creating auto temp channel! ' + channel.id);
                         chatPrivate(onChannelCreate[i].creator.clientId, config.autoTempChannelsErrorMessage);

@@ -463,7 +463,7 @@ registerPlugin(
         sinusbot.on('chat', function (chat) {
             if (config.botAIPrivateChat == 0 && chat.mode == 1 && getNick() != chat.clientNick) {
                 var check = true;
-                if (new RegExp('info [0-9]+').test(chat.msg) || chat.msg == 'info' || chat.msg == 'info server') {
+                if (new RegExp('info [0-9]+').test(chat.msg) || chat.msg == 'info' || chat.msg == 'info server' || chat.msg == 'info all') {
                     if (haveGroupOnServer(chat, helpGroupsId)) {
                         check = false;
                     }
@@ -596,8 +596,8 @@ registerPlugin(
          */
         sinusbot.on('chat', function (chat) {
             if (getNick() != chat.clientNick && chat.mode == 1 && haveGroupFromArray(chat, helpGroupsId)) {
-                if (chat.msg == 'info' || chat.msg == 'info server' || new RegExp('info [0-9]+').test(chat.msg)) {
-                    if (chat.msg == 'info') {
+                if (chat.msg == 'info' || chat.msg == 'info server' || chat.msg == 'info all' || new RegExp('info [0-9]+').test(chat.msg)) {
+                    if (chat.msg == 'info' || chat.msg == 'info all') {
                         var channelLog = sinusbot.getVar(chat.channel);
                     } else if (new RegExp('info [0-9]+').test(chat.msg)) {
                         var channelLog = sinusbot.getVar(parseInt(chat.msg.split(' ')[1]));
@@ -611,7 +611,11 @@ registerPlugin(
                         if (channelLog.length < 50) {
                             var history = 0;
                         } else {
-                            var history = channelLog.length - 50;
+                            if(chat.msg == 'info all') {
+                                var history = 0;
+                            } else {
+                                var history = channelLog.length - 50;
+                            }
                         }
                         for (var i = history; i < channelLog.length; i++) {
                             var logEntry = channelLog[i];

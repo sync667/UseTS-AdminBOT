@@ -20,7 +20,7 @@
 registerPlugin(
     {
         name: 'UseTS-AdminBOT',
-        version: '0.3.4',
+        version: '0.3.5',
         description: 'Many administration functions in one plugin.',
         author: 'sync667',
         vars: {

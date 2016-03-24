@@ -24,6 +24,7 @@ UseTS-AdminBOT is multifunctional bot script in ECMAScript 5 (JavaScript) to use
  By Private Chat to Bot
  - info - Currently channel activity last 50 records*1
  - info server - Joins/Disconnects last 50 records to server*1
+ - info all - Currently channel full logged activity*1
  - info ID - Specific channel by ID last 50 records*1
  
 Permissions

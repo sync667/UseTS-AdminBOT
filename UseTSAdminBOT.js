@@ -20,7 +20,7 @@
 registerPlugin(
     {
         name: 'UseTS-AdminBOT',
-        version: '0.3.5',
+        version: '0.3.6',
         description: 'Many administration functions in one plugin.',
         author: 'sync667',
         vars: {
@@ -540,6 +540,11 @@ registerPlugin(
                 if (sinusbot.getVar("maxOnlineRecord") < clients) {
                     maxOnlineClientsChannel(clients);
                     sinusbot.setVar("maxOnlineRecord", clients);
+                }
+
+                var wasUpdated = (getChannelParams(config.maxOnlineUsersChannel).name.search(sinusbot.getVar('maxOnlineRecord')) != -1);
+                if(!wasUpdated) {
+                    maxOnlineClientsChannel(sinusbot.getVar("maxOnlineRecord"));
                 }
             }
 

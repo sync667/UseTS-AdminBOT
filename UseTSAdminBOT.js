@@ -542,7 +542,7 @@ registerPlugin(
                     sinusbot.setVar("maxOnlineRecord", clients);
                 }
 
-                var wasUpdated = (getChannelParams(config.maxOnlineUsersChannel).name.search(sinusbot.getVar('maxOnlineRecord')) != -1);
+                var wasUpdated = ((getChannelParams(config.maxOnlineUsersChannel).name).indexOf(sinusbot.getVar('maxOnlineRecord'))) != -1;
                 if(!wasUpdated) {
                     maxOnlineClientsChannel(sinusbot.getVar("maxOnlineRecord"));
                 }

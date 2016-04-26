@@ -45,6 +45,8 @@ registerPlugin(
                 placeholder: 'Default 60 seconds'},
             helpStaffJoined: {title: 'Message to staff when someone of them join to help user - s0 for Username of helper, s1 for Username of user', type: 'string',
                 placeholder: 'Staff member [b]s0[/b] joined to help [b]s1[/b].'},
+            staffJoinSupport: {title: 'Send message to whole staff when one of them help start to help waiting user?', type: 'select',
+                options: ['Yes','No']},
             helpStaffNotificationType: {title: 'Support (staff users) notification type', type: 'select',
                 options: ['Chat','Poke']},
             helpUsersNotificationType: {title: 'Support (normal users) notification type', type: 'select',
@@ -134,6 +136,8 @@ registerPlugin(
             config.helpCloseNoStaff = 1;
         if (isUndefined(config.helpAwayMode))
             config.helpAwayMode = 1;
+        if (isUndefined(config.staffJoinSupport))
+            config.staffJoinSupport = 1;
         if (isUndefined(config.helpStaffNotificationType))
             config.helpStaffNotificationType = 0;
         if (isUndefined(config.helpUsersNotificationType))
@@ -317,19 +321,21 @@ registerPlugin(
                     for (var i = 0; i < usersOnHelp.length; i++) {
                         var user = usersOnHelp[i];
                         if (user.newChannel == e.newChannel && user.staffReaction != true) {
-                            staff.forEach(function (staffClientId) {
-                                if (staffClientId != e.clientId) {
-                                    var message = replaceSNVariables(config.helpStaffJoined, e.clientNick, user.clientNick);
-                                    if (config.helpStaffNotificationType == 0) {
-                                        message = replaceSNVariables(
-                                            config.helpStaffJoined,
-                                            '[URL=client://0/' + e.clientUid + ']' + e.clientNick + '[/URL]',
-                                            '[URL=client://0/' + user.clientUid + ']' + user.clientNick + '[/URL]'
-                                        );
+                            if(config.staffJoinSupport == 0) {
+                                staff.forEach(function (staffClientId) {
+                                    if (staffClientId != e.clientId) {
+                                        var message = replaceSNVariables(config.helpStaffJoined, e.clientNick, user.clientNick);
+                                        if (config.helpStaffNotificationType == 0) {
+                                            message = replaceSNVariables(
+                                                config.helpStaffJoined,
+                                                '[URL=client://0/' + e.clientUid + ']' + e.clientNick + '[/URL]',
+                                                '[URL=client://0/' + user.clientUid + ']' + user.clientNick + '[/URL]'
+                                            );
+                                        }
+                                        sendUserNotification(config.helpStaffNotificationType, staffClientId, message);
                                     }
-                                    sendUserNotification(config.helpStaffNotificationType, staffClientId, message);
-                                }
-                            });
+                                });
+                            }
                             user.staffReaction = true;
                             usersOnHelp[i] = user;
                         }
@@ -755,7 +761,8 @@ registerPlugin(
             if (!isUndefined(config.staffOnlineChannelName) || !isUndefined(config.staffOnlineChannelId)) {
                 var channel = getChannelParams(parseInt(config.staffOnlineChannelId));
                 if (channel != false) {
-                    channel.name = replaceSNVariables(config.staffOnlineChannelName, staffOnline.toString());
+                    channel.name = replaceSNVariables(config.staffOnlineChannelName,
+                        (staffOnline != 0 ? staffOnline.toString() : 'offline'));
                     channelUpdate(channel.id, {name: channel.name});
                 }
             }

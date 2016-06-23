@@ -20,7 +20,7 @@
 registerPlugin(
     {
         name: 'UseTS-AdminBOT',
-        version: '0.3.6',
+        version: '0.4.0',
         description: 'Many administration functions in one plugin.',
         author: 'sync667',
         vars: {
@@ -79,9 +79,17 @@ registerPlugin(
             maxOnlineUsersChannelId: {title: 'Channel with name update for max online users information', type: 'channel'},
             maxOnlineUsersChannel: {title: 'Name of auto max online channel - s0 is for max online number', type: 'string',
                 placeholder: "Max Users Online: s0"},
+            maxOnlineUsersChannelDesc: {title: 'Desc of max channel - s0 is for record date', type: 'string',
+                placeholder: "Last record date: s0"},
             staffOnlineChannelId: {title: 'Channel with name update for staff online information', type: 'channel'},
             staffOnlineChannelName: {title: 'Name of staff online channel - s0 is online number', type: 'string',
                 placeholder: "Staff Online: s0"},
+            staffOnlineChannelSublist: {title: 'Turn on or off staff list by subchannels', type: 'select',
+                options: ['On', 'Off']},
+            staffOnlineChannelZero: {title: 'When none admins are online text - can be 0', type: 'string',
+                placeholder: "none"},
+            staffOnlineChannelDesc: {title: 'Desc of staff online channel - s0 is nicname, s1 is group', type: 'string',
+                placeholder: "s0 - s1 is online"},
             registerGroupId: {title: 'Registration Group Id', type: 'number'},
             registerWelcomeMessage: {title: 'Welcome message for user without register group', type: 'multiline'},
             registerMessageType: {title: 'Type of message poke or chat', type: 'select',
@@ -91,7 +99,12 @@ registerPlugin(
             autoMusicCodecBot: {title: 'Change codec of channel to music when bot joins?', type: 'select',
                 options: ['On', 'Off']},
             autoMusicCodecNew: {title: 'Codec and quality to set on channel with bot joins - syntax: "codecId#quality", example for opus music "5#10"', type: 'string',
-                placeholder: '5#10'}
+                placeholder: '5#10'},
+            clockChannel: {title: 'Channel for clock display', type: 'channel'},
+            clockFormat: {title: 'Format of clock - s0 day, s1 month, s2 year, s3 hour, s4 minute', type: 'string',
+                placeholder: "[cspacer*] s3:s4 | s0.s1.s2"},
+            clockTimezone: {title: 'Select clock timezone offset from UTC (type number like 2 or -2 etc.)', type: 'string',
+                placeholder: "0"}
         }
     },
     function(sinusbot, config, info) {
@@ -128,8 +141,6 @@ registerPlugin(
             config.autoTempChannelsPass = 1;
         if (isUndefined(config.autoTempChannelsPassLength) || config.autoTempChannelsPassLength < 0)
             config.autoTempChannelsPassLength = 4;
-        if (isUndefined(config.helpStaffAwayTime) || config.helpStaffAwayTime < 0)
-            config.helpStaffAwayTime = 60;
         if (isUndefined(config.botChecksEvery) || config.botChecksEvery < 0)
             config.botChecksEvery = 60;
         if (isUndefined(config.helpCloseNoStaff))
@@ -138,6 +149,8 @@ registerPlugin(
             config.helpAwayMode = 1;
         if (isUndefined(config.staffJoinSupport))
             config.staffJoinSupport = 1;
+        if (isUndefined(config.staffOnlineChannelSublist))
+            config.staffOnlineChannelSublist = 1;
         if (isUndefined(config.helpStaffNotificationType))
             config.helpStaffNotificationType = 0;
         if (isUndefined(config.helpUsersNotificationType))
@@ -152,6 +165,10 @@ registerPlugin(
             config.registerMessageOn = 1;
         if (isUndefined(config.autoMusicCodecBot))
             config.autoMusicCodecBot = 1;
+        if (isUndefined(config.clockChannel))
+            config.clockChannel = -1;
+        if (isUndefined(config.clockTimezone))
+            config.clockTimezone = 0;
         if (isUndefined(sinusbot.getVar("maxOnlineRecord")))
             sinusbot.setVar("maxOnlineRecord", 0);
         if (isUndefined(sinusbot.getVar("tempChannels")))
@@ -182,10 +199,18 @@ registerPlugin(
             config.onlineUsersChannel = "Users Online: s0";
         if (isUndefined(config.maxOnlineUsersChannel))
             config.maxOnlineUsersChannel = "Max Users Online: s0";
+        if (isUndefined(config.maxOnlineUsersChannelDesc))
+            config.maxOnlineUsersChannelDesc = "Last record date: s0";
         if (isUndefined(config.staffOnlineChannelName))
             config.staffOnlineChannelName = "Staff Online: s0";
+        if (isUndefined(config.staffOnlineChannelZero))
+            config.staffOnlineChannelZero = "none";
+        if (isUndefined(config.staffOnlineChannelDesc))
+            config.staffOnlineChannelDesc = "s0 - s1 is online";
         if (isUndefined(config.autoMusicCodecNew))
             config.autoMusicCodecNew = '5#10';
+        if (isUndefined(config.clockFormat))
+            config.clockFormat = "[cspacer*] s3:s4 | s0.s1.s2";
 
         try {
             var helpChannelsId = config.helpChannelsId.toString().split(',');
@@ -228,19 +253,49 @@ registerPlugin(
             if(config.helpAwayMode == 0 && e.client.away == 1)
                 isStaff = false;
 
-            if (isStaff) {
-                if (staff.indexOf(e.clientId) == -1) {
-                    staff.push(e.clientId);
+            var objectId = getObjectIdArray(staff, e.clientId);
+
+            if (isStaff != false) {
+
+                for (var i = 0; i < staff.length; i++) {
+                    if (getUserChannelId(staff[i].id) == 0) {
+                        if(config.staffOnlineChannelSublist == 0) {
+                            var channelId = getChannelId(staff[i].nick + ' | ' + staff[i].groups.n, config.staffOnlineChannelId);
+                        }
+                        staff.splice(i, 1);
+                        if(!isUndefined(channelId))
+                        {
+                            channelDelete(channelId, true);
+                        }
+                    }
                 }
-            } else if (staff.indexOf(e.clientId) >= 0) {
-                staff = removeFromArray(staff, e.clientId);
-            }
 
-            for (var i = 0; i < staff.length; i++) {
-                var clientId = staff[i];
-
-                if (getUserChannelId(clientId) == 0) {
-                    staff = removeFromArray(staff, clientId);
+                if (objectId == -1) {
+                    var group = haveGroupFromArray(e, helpGroupsId);
+                    staff.push({id: e.clientId, uuid: e.clientUid, nick: e.clientNick, groups: group});
+                    if(config.staffOnlineChannelSublist == 0) {
+                        var channel = {
+                            name: e.clientNick + ' | ' + group.n,
+                            parent: config.staffOnlineChannelId,
+                            topic: e.clientNick + ' | ' + group.n,
+                            description: '[URL=client://0/' + e.clientUid + ']' + e.clientNick + '[/URL] | ' + group.n +
+                            ' - [COLOR=#00aa00]online![/COLOR]',
+                            enc: 1,
+                            perm: 0,
+                            sperm: 1,
+                            maxClients: 0,
+                            default: 0
+                        };
+                        channelCreate(channel);
+                    }
+                }
+            } else if (objectId >= 0) {
+                if(config.staffOnlineChannelSublist == 0) {
+                    var channelId = getChannelId(staff[objectId].nick + ' | ' + staff[objectId].groups.n, config.staffOnlineChannelId);
+                }
+                staff.splice(objectId, 1);
+                if(!isUndefined(channelId)) {
+                    channelDelete(channelId, true);
                 }
             }
 
@@ -282,7 +337,7 @@ registerPlugin(
                             staffReaction: false
                         });
                     } else {
-                        staff.forEach(function (staffClientId) {
+                        for (var i = 0; i < staff.length; i++) {
                             var message = replaceSNVariables(config.helpStaffNotification, e.clientNick, staff.length);
                             if (config.helpStaffNotificationType == 0) {
                                 message = replaceSNVariables(
@@ -291,8 +346,8 @@ registerPlugin(
                                     staff.length
                                 );
                             }
-                            sendUserNotification(config.helpStaffNotificationType, staffClientId, message);
-                        });
+                            sendUserNotification(config.helpStaffNotificationType, staff[i].id, message);
+                        }
                         sendUserNotification(config.helpUsersNotificationType, e.clientId, replaceSNVariables(config.helpUserNotification, e.clientNick, staff.length));
                         usersOnHelp.push({
                             clientId: e.clientId,
@@ -322,8 +377,8 @@ registerPlugin(
                         var user = usersOnHelp[i];
                         if (user.newChannel == e.newChannel && user.staffReaction != true) {
                             if(config.staffJoinSupport == 0) {
-                                staff.forEach(function (staffClientId) {
-                                    if (staffClientId != e.clientId) {
+                                for (var i = 0; i < staff.length; i++)  {
+                                    if (staff[i].id != e.clientId) {
                                         var message = replaceSNVariables(config.helpStaffJoined, e.clientNick, user.clientNick);
                                         if (config.helpStaffNotificationType == 0) {
                                             message = replaceSNVariables(
@@ -332,9 +387,9 @@ registerPlugin(
                                                 '[URL=client://0/' + user.clientUid + ']' + user.clientNick + '[/URL]'
                                             );
                                         }
-                                        sendUserNotification(config.helpStaffNotificationType, staffClientId, message);
+                                        sendUserNotification(config.helpStaffNotificationType, staff[i].id, message);
                                     }
-                                });
+                                }
                             }
                             user.staffReaction = true;
                             usersOnHelp[i] = user;
@@ -344,10 +399,10 @@ registerPlugin(
                 }
             } else if (isChannelInArray(e.oldChannel, helpChannelsId)) {
                 if (isIgnored == false) {
-                    for (var i = 0; i > usersOnHelp.length; i++) {
+                    for (var i = 0; i < usersOnHelp.length; i++) {
                         var user = usersOnHelp[i];
                         if (user.clientId == e.clientId && user.oldChannel == e.oldChannel) {
-                            removeFromArray(usersOnHelp, user);
+                            usersOnHelp.splice(i, 1);
                         }
                     }
                     sinusbot.setVar('usersOnHelp', usersOnHelp);
@@ -364,7 +419,7 @@ registerPlugin(
          */
         sinusbot.on('clientMove', function (e) {
             if (isChannelInArray(e.newChannel, autoTempChannelsId)) {
-                if (!haveGroupFromArray(e, autoTempChannelsRestrictedGroups)) {
+                if (haveGroupFromArray(e, autoTempChannelsRestrictedGroups) == false) {
                     var autoTempChannelParentId = parseInt(config.autoTempChannelsParentId);
                     var channelName = config.autoTempChannelsName;
                     var channelPassword = randomString(config.autoTempChannelsPassLength, '#');
@@ -405,7 +460,7 @@ registerPlugin(
 
                     var onChannelCreate = sinusbot.getVar("onChannelCreate");
 
-                    if (!isUndefined(onChannelCreate) || onChannelCreate.indexOf(channelCreated) == -1) {
+                    if (!isUndefined(onChannelCreate) && onChannelCreate.indexOf(channelCreated) == -1) {
                         onChannelCreate.push(channelCreated);
                         sinusbot.setVar("onChannelCreate", onChannelCreate);
                     } else {
@@ -419,28 +474,29 @@ registerPlugin(
 
         sinusbot.on('channelCreate', function (channel) {
             var onChannelCreate = sinusbot.getVar("onChannelCreate");
+            if(!isUndefined(onChannelCreate) && !isEmpty(onChannelCreate)) {
+                for (var i = 0; i < onChannelCreate.length; i++) {
+                    if (onChannelCreate[i].channelName == channel.name && onChannelCreate[i].channelParentId == channel.parent) {
+                        if (channel.id > 0) {
+                            var tempChannels = sinusbot.getVar("tempChannels");
 
-            for (var i = 0; i < onChannelCreate.length; i++) {
-                if (onChannelCreate[i].channelName == channel.name && onChannelCreate[i].channelParentId == channel.parent) {
-                    if (channel.id > 0) {
-                        var tempChannels = sinusbot.getVar("tempChannels");
-
-                        sinusbot.log('Temp channel ' + channel.name + ' ID: ' + channel.id + ' was created by ' + onChannelCreate[i].creator.clientId + "@" + onChannelCreate[i].creator.clientNick);
-                        tempChannels.push(channel.id);
-                        sinusbot.setVar("tempChannels", tempChannels);
-                        move(onChannelCreate[i].creator.clientId, channel.id);
-                        chatPrivate(onChannelCreate[i].creator.clientId, config.autoTempChannelsMessage);
-                        if(config.autoTempChannelsPass == 0) {
-                            chatPrivate(onChannelCreate[i].creator.clientId, replaceSNVariables(config.autoTempChannelsPassMessage, onChannelCreate[i].password));
+                            sinusbot.log('Temp channel ' + channel.name + ' ID: ' + channel.id + ' was created by ' + onChannelCreate[i].creator.clientId + "@" + onChannelCreate[i].creator.clientNick);
+                            tempChannels.push(channel.id);
+                            sinusbot.setVar("tempChannels", tempChannels);
+                            move(onChannelCreate[i].creator.clientId, channel.id);
+                            chatPrivate(onChannelCreate[i].creator.clientId, config.autoTempChannelsMessage);
+                            if (config.autoTempChannelsPass == 0) {
+                                chatPrivate(onChannelCreate[i].creator.clientId, replaceSNVariables(config.autoTempChannelsPassMessage, onChannelCreate[i].password));
+                            }
+                        } else {
+                            sinusbot.log('Something goes wrong when creating auto temp channel! ' + channel.id);
+                            chatPrivate(onChannelCreate[i].creator.clientId, config.autoTempChannelsErrorMessage);
                         }
-                    } else {
-                        sinusbot.log('Something goes wrong when creating auto temp channel! ' + channel.id);
-                        chatPrivate(onChannelCreate[i].creator.clientId, config.autoTempChannelsErrorMessage);
-                    }
 
-                    onChannelCreate.splice(i, 1);
-                    sinusbot.setVar("onChannelCreate", onChannelCreate);
-                    break;
+                        onChannelCreate.splice(i, 1);
+                        sinusbot.setVar("onChannelCreate", onChannelCreate);
+                        break;
+                    }
                 }
             }
         });
@@ -451,16 +507,60 @@ registerPlugin(
         setInterval(function () {
             //Temporary channels inactive deleting
             var tempChannels = sinusbot.getVar("tempChannels");
-
-            for (var i = 0; i < tempChannels.length; i++) {
-                if (getClientsNumber(tempChannels[i]) == 0) {
-                    channelDelete(tempChannels[i], true);
-                    sinusbot.log('Temp channel ' + tempChannels[i] + ' was deleted by check timer.');
-                    tempChannels.splice(i, 1);
+            if(!isUndefined(tempChannels) && !isEmpty(tempChannels)) {
+                for (var i = 0; i < tempChannels.length; i++) {
+                    if (getClientsNumber(tempChannels[i]) == 0) {
+                        channelDelete(tempChannels[i], true);
+                        sinusbot.log('Temp channel ' + tempChannels[i] + ' was deleted by check timer.');
+                        tempChannels.splice(i, 1);
+                    }
                 }
+                sinusbot.setVar("tempChannels", tempChannels);
             }
-            sinusbot.setVar("tempChannels", tempChannels);
+            //Users on help check
+            var userOnHelp = sinusbot.getVar('usersOnHelp');
+            if(!isUndefined(userOnHelp) && !isEmpty(userOnHelp)) {
+                for (var i = 0; i < userOnHelp.length; i++) {
+                    var userChannel = getUserChannelId(userOnHelp[i].clientId);
+                    var out = true;
+                    for (var i2 = 0; i < helpChannelsId.length; i2++) {
+                        if (userChannel == helpChannelsId[i2]) {
+                            out = false;
+                        }
+                    }
+                    if (out) {
+                        userOnHelp.splice(i, 1);
+                    }
+                }
 
+                sinusbot.setVar('usersOnHelp', userOnHelp);
+            }
+
+            if(config.clockChannel != -1)
+            {
+                var clockChannel = getChannelParams(config.clockChannel);
+                var date_local = new Date();
+                var date = new Date(date_local.getUTCFullYear(), date_local.getUTCMonth(), date_local.getDate(),
+                    date_local.getUTCHours(), date_local.getUTCMinutes(), date_local.getUTCSeconds());
+
+                var timezone = parseInt(config.clockTimezone);
+                if(timezone < 9)
+                {
+                    date.setHours(date.getHours() + timezone);
+                } else if (timezone > 8)
+                {
+                    date.setHours(date.getHours() - (timezone - 8));
+                }
+                var minutes = date.getMinutes();
+                if(minutes < 10){
+                    minutes = '0' + minutes;
+                }
+
+                clockChannel.name = replaceSNVariables(config.clockFormat, date.getDate(), date.getMonth() + 1, date.getFullYear(),
+                date.getHours(), minutes);
+
+                channelUpdate(clockChannel.id, clockChannel);
+            }
         }, 1000 * config.botChecksEvery);
 
         /*
@@ -523,7 +623,7 @@ registerPlugin(
             if (e.oldChannel == 0 && config.registerMessageOn == 0) {
                 var isNew = !haveGroupOnServer(e, parseInt(config.registerGroupId));
 
-                if (isNew && !haveGroupFromArray(e, helpGroupsId)) {
+                if (isNew && haveGroupFromArray(e, helpGroupsId) == false) {
                     var message = config.registerWelcomeMessage;
                     if (config.registerMessageType == 0) {
                         poke(e.clientId, message);
@@ -548,15 +648,18 @@ registerPlugin(
                     sinusbot.setVar("maxOnlineRecord", clients);
                 }
 
-                var wasUpdated = ((getChannelParams(config.maxOnlineUsersChannel).name).indexOf(sinusbot.getVar('maxOnlineRecord'))) != -1;
-                if(!wasUpdated) {
-                    maxOnlineClientsChannel(sinusbot.getVar("maxOnlineRecord"));
+                var maxOnlineChannel = getChannelParams(config.maxOnlineUsersChannel);
+                if(!isUndefined(maxOnlineChannel.name)) {
+                    var wasUpdated = maxOnlineChannel.name.indexOf(sinusbot.getVar('maxOnlineRecord')) == -1;
+                    if (wasUpdated) {
+                        maxOnlineClientsChannel(sinusbot.getVar("maxOnlineRecord"));
+                    }
                 }
             }
 
             //Staff Groups bypass
-            if (haveGroupFromArray(e, helpGroupsId)) {
-                staffOnlineChannel(sinusbot.getVar('staff').length);
+            if (haveGroupFromArray(e, helpGroupsId) != false) {
+                staffOnlineChannel(sinusbot.getVar('staff').length,  sinusbot.getVar('staff'));
             }
         });
 
@@ -606,7 +709,7 @@ registerPlugin(
          Command event for getting channel activity log
          */
         sinusbot.on('chat', function (chat) {
-            if (getNick() != chat.clientNick && chat.mode == 1 && haveGroupFromArray(chat, helpGroupsId)) {
+            if (getNick() != chat.clientNick && chat.mode == 1 && haveGroupFromArray(chat, helpGroupsId) != false) {
                 if (chat.msg == 'info' || chat.msg == 'info server' || chat.msg == 'info all' || new RegExp('info [0-9]+').test(chat.msg)) {
                     if (chat.msg == 'info' || chat.msg == 'info all') {
                         var channelLog = sinusbot.getVar(chat.channel);
@@ -710,25 +813,6 @@ registerPlugin(
         });
 
         /*
-         Fix for staff array
-         */
-        sinusbot.on('clientServergroupAdd', function (client) {
-            if (haveSpecificGroupFromArray(client.serverGroupId, helpGroupsId)) {
-                var staff = sinusbot.getVar('staff');
-                staff.push(client.clientId);
-                sinusbot.setVar('staff', staff);
-                staffOnlineChannel(sinusbot.getVar('staff').length);
-            }
-        });
-
-        sinusbot.on('clientServergroupDel', function (client) {
-            if (haveSpecificGroupFromArray(client.serverGroupId, helpGroupsId)) {
-                sinusbot.setVar('staff', removeFromArray(sinusbot.getVar('staff'), client.clientId));
-                staffOnlineChannel(sinusbot.getVar('staff').length);
-            }
-        });
-
-        /*
          Update clients online information channel
          */
         function onlineClientsChannel(online) {
@@ -748,8 +832,10 @@ registerPlugin(
             if (!isUndefined(config.maxOnlineUsersChannel) || !isUndefined(config.maxOnlineUsersChannelId)) {
                 var channel = getChannelParams(parseInt(config.maxOnlineUsersChannelId));
                 if (channel != false) {
+                    var date = new Date().toISOString();
                     channel.name = replaceSNVariables(config.maxOnlineUsersChannel, maxOnline);
-                    channelUpdate(channel.id, {name: channel.name});
+                    channel.description = replaceSNVariables(config.maxOnlineUsersChannelDesc, date);
+                    channelUpdate(channel.id, {name: channel.name, description: channel.description});
                 }
             }
         }
@@ -757,13 +843,26 @@ registerPlugin(
         /*
          Update staff online information channel
          */
-        function staffOnlineChannel(staffOnline) {
+        function staffOnlineChannel(staffOnline, staffList) {
             if (!isUndefined(config.staffOnlineChannelName) || !isUndefined(config.staffOnlineChannelId)) {
                 var channel = getChannelParams(parseInt(config.staffOnlineChannelId));
                 if (channel != false) {
-                    channel.name = replaceSNVariables(config.staffOnlineChannelName,
-                        (staffOnline != 0 ? staffOnline.toString() : 'offline'));
-                    channelUpdate(channel.id, {name: channel.name});
+                    if(channel.name.indexOf(staffOnline) == -1) {
+                        channel.name = replaceSNVariables(config.staffOnlineChannelName,
+                            (staffOnline != 0 ? staffOnline.toString() : config.staffOnlineChannelZero));
+                        var parsedList = '';
+                        for (var i = 0; i < staffList.length; i++) {
+                            if(staffList.length != 0) {
+                                var member = staffList[i];
+                                var text = "\n" + replaceSNVariables(config.staffOnlineChannelDesc,
+                                        '[URL=client://0/' + member.uuid + ']' + member.nick + '[/URL]', member.groups.n);
+                                parsedList += text;
+                            }
+
+                        }
+
+                        channelUpdate(channel.id, {name: channel.name, description: parsedList.toString()});
+                    }
                 }
             }
         }
@@ -789,8 +888,7 @@ registerPlugin(
             var result = false;
             for (var i = 0; i < e.clientServerGroups.length; i++) {
                 if (e.clientServerGroups[i].i == group) {
-                    result = true;
-                    break;
+                    return result = e.clientServerGroups[i];
                 }
             }
 
@@ -808,9 +906,9 @@ registerPlugin(
                 if (typeof(group) != 'number') {
                     group = parseInt(group);
                 }
-                if (haveGroupOnServer(e, group)) {
-                    result = true;
-                    break;
+                var groupOnServer = haveGroupOnServer(e, group);
+                if (groupOnServer != false) {
+                    return result = groupOnServer;
                 }
             }
 
@@ -827,10 +925,26 @@ registerPlugin(
                 if (typeof(group) != 'number') {
                     group = parseInt(group);
                 }
-
                 if (groupId == group) {
-                    result = true;
-                    break;
+                    return result = group;
+                }
+            }
+
+            return result;
+        }
+
+        /*
+         If user have specific group from user groups array
+         */
+        function haveSpecificGroupFromUserGroups(groupId, arrayGroups) {
+            var result = false;
+            if(isUndefined(arrayGroups))
+                return false;
+            for (var i = 0; i < arrayGroups.length; i++) {
+                var group = arrayGroups[i];
+                sinusbot.log('te' + groupId + 'f: ' + group.i);
+                if (groupId == group.i) {
+                    return result = group;
                 }
             }
 
@@ -1005,11 +1119,25 @@ registerPlugin(
          Function remove specific element from array
          */
         function removeFromArray(array, item) {
+            if(isUndefined(array) || isUndefined(item))
+                return false;
             var index = array.indexOf(item);
             if (index > -1) {
                 array.splice(index, 1);
             }
             return array;
+        }
+
+        /*
+         Filter object in array
+         */
+        function getObjectIdArray(array, id) {
+            for (var i = 0, len = array.length; i < len; i++) {
+                if (array[i].id === id) {
+                    return i;
+                }
+            }
+            return -1;
         }
 
         // -> isUndefined(variable)

@@ -20,7 +20,7 @@
 registerPlugin(
     {
         name: 'UseTS-AdminBOT',
-        version: '0.4.0',
+        version: '0.4.2',
         description: 'Many administration functions in one plugin.',
         author: 'sync667',
         vars: {
@@ -502,7 +502,7 @@ registerPlugin(
         });
 
         /*
-         Timer checks event
+         Timer checks events
          */
         setInterval(function () {
             //Temporary channels inactive deleting
@@ -535,86 +535,36 @@ registerPlugin(
 
                 sinusbot.setVar('usersOnHelp', userOnHelp);
             }
+        }, 1000 * config.botChecksEvery);
 
+        setInterval(function () {
             if(config.clockChannel != -1)
             {
                 var clockChannel = getChannelParams(config.clockChannel);
-                var date_local = new Date();
-                var date = new Date(date_local.getUTCFullYear(), date_local.getUTCMonth(), date_local.getDate(),
-                    date_local.getUTCHours(), date_local.getUTCMinutes(), date_local.getUTCSeconds());
+                if (!isUndefined(clockChannel)) {
+                    var date_local = new Date();
+                    var date = new Date(date_local.getUTCFullYear(), date_local.getUTCMonth(), date_local.getDate(),
+                        date_local.getUTCHours(), date_local.getUTCMinutes(), date_local.getUTCSeconds());
 
-                var timezone = parseInt(config.clockTimezone);
-                if(timezone < 9)
-                {
-                    date.setHours(date.getHours() + timezone);
-                } else if (timezone > 8)
-                {
-                    date.setHours(date.getHours() - (timezone - 8));
+                    var timezone = parseInt(config.clockTimezone);
+                    var hours = date.getHours();
+                    if (timezone < 9) {
+                        hours += timezone;
+                    } else if (timezone > 8) {
+                        hours -= (timezone - 8);
+                    }
+                    var minutes = date.getMinutes();
+                    if (minutes < 10) {
+                        minutes = '0' + minutes;
+                    }
+
+                    clockChannel.name = replaceSNVariables(config.clockFormat, date.getDate(), date.getMonth() + 1, date.getFullYear(),
+                        hours, minutes);
+
+                    channelUpdate(clockChannel.id, [clockChannel.name]);
                 }
-                var minutes = date.getMinutes();
-                if(minutes < 10){
-                    minutes = '0' + minutes;
-                }
-
-                clockChannel.name = replaceSNVariables(config.clockFormat, date.getDate(), date.getMonth() + 1, date.getFullYear(),
-                date.getHours(), minutes);
-
-                channelUpdate(clockChannel.id, clockChannel);
             }
         }, 1000 * config.botChecksEvery);
-
-        /*
-         Bot AI and commands, event for chat
-         */
-        sinusbot.on('chat', function (chat) {
-            if (config.botAIPrivateChat == 0 && chat.mode == 1 && getNick() != chat.clientNick) {
-                var check = true;
-                if (new RegExp('info [0-9]+').test(chat.msg) || chat.msg == 'info' || chat.msg == 'info server' || chat.msg == 'info all') {
-                    if (haveGroupOnServer(chat, helpGroupsId)) {
-                        check = false;
-                    }
-                }
-                if (check) {
-                    var options = {
-                        method: "GET",
-                        headers: "Content-type: text/html; charset=utf-8",
-                        timeout: 15000,
-                        url: "https://usets.pl/bot.php?msg=" + chat.msg
-                    };
-                    http(options, function (error, response) {
-                        if (error == null && response != null && response.statusCode == 200) {
-                            chatPrivate(chat.clientId, response.data);
-                        } else if (response != null) {
-                            sinusbot.log('Problem with your bot chat! ' + response.statusCode + "-" + typeof(response.statusCode) + "-" + typeof(200));
-                        } else {
-                            sinusbot.log('Problem with your bot chat! ' + error);
-                        }
-                    });
-                }
-            }
-        });
-
-        /*
-         Bot AI and commands, event for poke
-         */
-        sinusbot.on('poke', function (message) {
-            if (config.botAIPoke == 0 && getNick() != message.clientNick) {
-                var options = {
-                    method: "GET",
-                    headers: "Content-type: text/html; charset=utf-8",
-                    timeout: 15000, url: "https://usets.pl/bot.php?msg=" + message.msg
-                };
-                http(options, function (error, response) {
-                    if (error == null && response != null && response.statusCode == 200) {
-                        poke(message.clientId, response.data);
-                    } else if (response != null) {
-                        sinusbot.log('Problem with your bot poke! ' + response.statusCode + "-" + typeof(response.statusCode) + "-" + typeof(200));
-                    } else {
-                        sinusbot.log('Problem with your bot poke! ' + error);
-                    }
-                });
-            }
-        });
 
         /*
          Welcome poke information event
@@ -860,7 +810,6 @@ registerPlugin(
                             }
 
                         }
-
                         channelUpdate(channel.id, {name: channel.name, description: parsedList.toString()});
                     }
                 }
@@ -891,7 +840,6 @@ registerPlugin(
                     return result = e.clientServerGroups[i];
                 }
             }
-
             return result;
         }
 
@@ -911,43 +859,6 @@ registerPlugin(
                     return result = groupOnServer;
                 }
             }
-
-            return result;
-        }
-
-        /*
-         If user have specific group from input array
-         */
-        function haveSpecificGroupFromArray(groupId, arrayGroups) {
-            var result = false;
-            for (var i = 0; i < arrayGroups.length; i++) {
-                var group = arrayGroups[i];
-                if (typeof(group) != 'number') {
-                    group = parseInt(group);
-                }
-                if (groupId == group) {
-                    return result = group;
-                }
-            }
-
-            return result;
-        }
-
-        /*
-         If user have specific group from user groups array
-         */
-        function haveSpecificGroupFromUserGroups(groupId, arrayGroups) {
-            var result = false;
-            if(isUndefined(arrayGroups))
-                return false;
-            for (var i = 0; i < arrayGroups.length; i++) {
-                var group = arrayGroups[i];
-                sinusbot.log('te' + groupId + 'f: ' + group.i);
-                if (groupId == group.i) {
-                    return result = group;
-                }
-            }
-
             return result;
         }
 
@@ -1010,31 +921,6 @@ registerPlugin(
                 }
             }
             return result;
-        }
-
-        /*
-         Function return array of all clients connected to server or channel
-         */
-        function getClients(channelId) {
-            var channel, channels, clients = [];
-            channels = getChannels();
-            if (typeof channelId == 'undefined') {
-                for (var i = 0; i < channels.length; i++) {
-                    channel = channels[i];
-                    for (var i2 = 0; i2 < channel.clients.length; i2++) {
-                        clients.push(channel.clients[i2]);
-                    }
-                }
-                return clients;
-            } else {
-                channel = getChannel(channelId);
-                if (isEmpty(channel.clients)) {
-                    return false;
-                } else {
-                    return channel.clients;
-                }
-            }
-            return false;
         }
 
         /*

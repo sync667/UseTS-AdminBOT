@@ -11,7 +11,6 @@ UseTS-AdminBOT is multifunctional bot script in ECMAScript 5 (JavaScript) to use
     - Handling staff away mode. (it's little tricky because user after set away mode have to change channel, sinusbot don't have event to handle that better)
   - Support channel with automatic name + online staff members information.
   - Automatic temporary channels secure system by user joining specific channels.
-  - Bots with AI so you can talk with them!
   - Welcome message send by bot if user do not have specific register group.
   - Users Online automatic channel.
   - Max Users Online automatic channel with date.
@@ -63,9 +62,6 @@ Just make sure you're using latest version of Sinusbot and make Pull Request wit
 ### TODOs
 
 - Auto add user to specific group joining specific channel.
-- Bot flood check.
-- Implement bot api over php only.
-- Message when bot is busy.
 - Welcome user with some info maybe stats.
 - Check if there are any channels with inactive date some of period.
 - Social media integrator.

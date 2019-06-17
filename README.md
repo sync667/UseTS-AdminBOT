@@ -1,3 +1,5 @@
+# Script don't work anymore and won't be continued.
+
 # UseTS.PL AdminBOT
 ### Our Teamspeak3 server https://usets.pl
 
